@@ -18,6 +18,9 @@ class WP_Security_Pilot_Settings {
             'scanner'       => array(
                 'scan_intensity'     => 'medium',
                 'enable_auto_repair' => false,
+                'scan_speed'         => 3,
+                'cache_enabled'      => true,
+                'cache_recheck_days' => 30,
             ),
             'notifications' => array(
                 'recipient_email'       => '',
@@ -91,6 +94,9 @@ class WP_Security_Pilot_Settings {
         $scanner_sanitized = array(
             'scan_intensity'     => $scan_intensity,
             'enable_auto_repair' => self::normalize_bool( $scanner, 'enable_auto_repair', $defaults['scanner']['enable_auto_repair'] ),
+            'scan_speed'         => self::normalize_int( $scanner, 'scan_speed', $defaults['scanner']['scan_speed'], 1, 5 ),
+            'cache_enabled'      => self::normalize_bool( $scanner, 'cache_enabled', $defaults['scanner']['cache_enabled'] ),
+            'cache_recheck_days' => self::normalize_int( $scanner, 'cache_recheck_days', $defaults['scanner']['cache_recheck_days'], 1, 365 ),
         );
 
         $recipient_email = isset( $notifications['recipient_email'] ) ? sanitize_email( $notifications['recipient_email'] ) : '';

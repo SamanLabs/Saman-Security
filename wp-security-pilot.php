@@ -18,7 +18,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 define( 'WP_SECURITY_PILOT_VERSION', '1.0.0' );
-define( 'WP_SECURITY_PILOT_SCHEMA_VERSION', '3.0.0' );
+define( 'WP_SECURITY_PILOT_SCHEMA_VERSION', '3.1.0' );
 
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-admin-loader.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/Core/class-firewall.php';
@@ -38,6 +38,7 @@ function wp_security_pilot_install_schema() {
     $scan_jobs_table = $wpdb->prefix . 'wpsp_scan_jobs';
     $scan_results_table = $wpdb->prefix . 'wpsp_scan_results';
     $scan_ignore_table = $wpdb->prefix . 'wpsp_scan_ignore';
+    $scan_files_table = $wpdb->prefix . 'wpsp_scan_files';
     $charset_collate = $wpdb->get_charset_collate();
 
     $sql = "CREATE TABLE {$table_name} (
@@ -122,6 +123,19 @@ function wp_security_pilot_install_schema() {
         PRIMARY KEY  (id)
     ) {$charset_collate};";
 
+    $scan_files_sql = "CREATE TABLE {$scan_files_table} (
+        id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+        file_path text NOT NULL,
+        file_hash varchar(64) NOT NULL DEFAULT '',
+        file_mtime bigint(20) unsigned NOT NULL DEFAULT 0,
+        last_scanned datetime NOT NULL,
+        last_status varchar(20) NOT NULL DEFAULT 'clean',
+        PRIMARY KEY  (id),
+        UNIQUE KEY file_path (file_path(191)),
+        KEY last_scanned (last_scanned),
+        KEY last_status (last_status)
+    ) {$charset_collate};";
+
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta( $sql );
     dbDelta( $activity_sql );
@@ -130,6 +144,7 @@ function wp_security_pilot_install_schema() {
     dbDelta( $scan_jobs_sql );
     dbDelta( $scan_results_sql );
     dbDelta( $scan_ignore_sql );
+    dbDelta( $scan_files_sql );
 
     wp_security_pilot_migrate_blocked_ips( $table_name, $ip_list_table );
     wp_security_pilot_seed_firewall_rules( $rules_table );
@@ -253,6 +268,7 @@ function wp_security_pilot_uninstall() {
         'wpsp_scan_jobs',
         'wpsp_scan_results',
         'wpsp_scan_ignore',
+        'wpsp_scan_files',
     );
 
     foreach ( $tables as $table ) {

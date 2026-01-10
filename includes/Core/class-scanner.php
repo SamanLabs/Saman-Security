@@ -3,6 +3,7 @@
 class WP_Security_Pilot_Scanner {
     const CHUNK_SIZE = 25;
     const MAX_SCAN_BYTES = 5242880;
+    private $scan_cache_table_exists = null;
 
     public function start_scan( $initiator = 'manual' ) {
         global $wpdb;
@@ -76,82 +77,110 @@ class WP_Security_Pilot_Scanner {
         set_transient( $lock_key, 1, MINUTE_IN_SECONDS );
 
         try {
-        $job = $this->get_job( $job_id );
-        if ( ! $job || in_array( $job['status'], array( 'completed', 'stopped' ), true ) ) {
-            return;
-        }
+            $job = $this->get_job( $job_id );
+            if ( ! $job || in_array( $job['status'], array( 'completed', 'stopped' ), true ) ) {
+                return;
+            }
 
-        if ( 'pending' === $job['status'] ) {
+            if ( 'pending' === $job['status'] ) {
+                $wpdb->update(
+                    $wpdb->prefix . 'wpsp_scan_jobs',
+                    array( 'status' => 'running' ),
+                    array( 'id' => $job_id ),
+                    array( '%s' ),
+                    array( '%d' )
+                );
+            }
+
+            $queue_key = $this->get_queue_option_key( $job_id );
+            $queue = get_option( $queue_key, array() );
+            if ( empty( $queue ) || ! is_array( $queue ) ) {
+                $this->complete_job( $job_id );
+                return;
+            }
+
+            $config = $this->get_scan_config( $job_id );
+            $chunk_size = $this->get_chunk_size( $config );
+            $chunk = array_slice( $queue, 0, $chunk_size );
+            $remaining = array_slice( $queue, $chunk_size );
+            update_option( $queue_key, $remaining, false );
+
+            $ignore_patterns = $this->get_ignore_patterns();
+            $checksums = $this->get_core_checksums();
+            $signatures = $this->get_malware_signatures();
+            $cache_enabled = ! empty( $config['cache_enabled'] ) && $this->has_scan_cache_table();
+
+            $processed = 0;
+            $last_message = '';
+            $skipped_unchanged = false;
+
+            foreach ( $chunk as $file_path ) {
+                $processed++;
+                if ( $this->is_ignored( $file_path, $ignore_patterns ) ) {
+                    continue;
+                }
+
+                if ( ! file_exists( $file_path ) || ! is_readable( $file_path ) ) {
+                    continue;
+                }
+
+                $relative_path = $this->get_relative_path( $file_path );
+                if ( $cache_enabled && $this->should_skip_file( $relative_path, $file_path, $config ) ) {
+                    $skipped_unchanged = true;
+                    continue;
+                }
+
+                $last_message = 'Scanning ' . $relative_path;
+                $file_status = 'clean';
+                $issue_found = false;
+
+                if ( $this->is_core_file( $relative_path, $checksums ) ) {
+                    $issue_found = $this->check_core_checksum( $job_id, $file_path, $relative_path, $checksums, $config );
+                    if ( $issue_found ) {
+                        $file_status = 'modified';
+                    }
+                    if ( $cache_enabled ) {
+                        $this->update_scan_cache_record( $relative_path, $file_path, $file_status );
+                    }
+                    continue;
+                }
+
+                if ( 'low' !== $config['scan_intensity'] ) {
+                    $issue_found = $this->check_malware_signatures( $job_id, $file_path, $relative_path, $signatures, $config );
+                    if ( $issue_found ) {
+                        $file_status = 'flagged';
+                    }
+                }
+
+                if ( $cache_enabled ) {
+                    $this->update_scan_cache_record( $relative_path, $file_path, $file_status );
+                }
+            }
+
+            if ( ! $last_message && $skipped_unchanged ) {
+                $last_message = 'Skipping unchanged files';
+            }
+
+            $new_processed = min( (int) $job['processed_files'] + $processed, (int) $job['total_files'] );
+
             $wpdb->update(
                 $wpdb->prefix . 'wpsp_scan_jobs',
-                array( 'status' => 'running' ),
+                array(
+                    'processed_files' => $new_processed,
+                    'last_message'    => $last_message ? $last_message : $job['last_message'],
+                ),
                 array( 'id' => $job_id ),
-                array( '%s' ),
+                array( '%d', '%s' ),
                 array( '%d' )
             );
-        }
 
-        $queue_key = $this->get_queue_option_key( $job_id );
-        $queue = get_option( $queue_key, array() );
-        if ( empty( $queue ) || ! is_array( $queue ) ) {
-            $this->complete_job( $job_id );
-            return;
-        }
-
-        $chunk = array_slice( $queue, 0, self::CHUNK_SIZE );
-        $remaining = array_slice( $queue, self::CHUNK_SIZE );
-        update_option( $queue_key, $remaining, false );
-
-        $ignore_patterns = $this->get_ignore_patterns();
-        $checksums = $this->get_core_checksums();
-        $signatures = $this->get_malware_signatures();
-        $config = $this->get_scan_config( $job_id );
-
-        $processed = 0;
-        $last_message = '';
-
-        foreach ( $chunk as $file_path ) {
-            $processed++;
-            if ( $this->is_ignored( $file_path, $ignore_patterns ) ) {
-                continue;
+            if ( empty( $remaining ) ) {
+                $this->complete_job( $job_id );
+                return;
             }
 
-            if ( ! file_exists( $file_path ) || ! is_readable( $file_path ) ) {
-                continue;
-            }
-
-            $relative_path = $this->get_relative_path( $file_path );
-            $last_message = 'Scanning ' . $relative_path;
-
-            if ( $this->is_core_file( $relative_path, $checksums ) ) {
-                $this->check_core_checksum( $job_id, $file_path, $relative_path, $checksums, $config );
-                continue;
-            }
-
-            if ( 'low' !== $config['scan_intensity'] ) {
-                $this->check_malware_signatures( $job_id, $file_path, $relative_path, $signatures, $config );
-            }
-        }
-
-        $new_processed = min( (int) $job['processed_files'] + $processed, (int) $job['total_files'] );
-
-        $wpdb->update(
-            $wpdb->prefix . 'wpsp_scan_jobs',
-            array(
-                'processed_files' => $new_processed,
-                'last_message'    => $last_message ? $last_message : $job['last_message'],
-            ),
-            array( 'id' => $job_id ),
-            array( '%d', '%s' ),
-            array( '%d' )
-        );
-
-        if ( empty( $remaining ) ) {
-            $this->complete_job( $job_id );
-            return;
-        }
-
-        wp_schedule_single_event( time() + 5, 'wpsp_scan_chunk', array( $job_id ) );
+            $delay = $this->get_chunk_delay( $config );
+            wp_schedule_single_event( time() + $delay, 'wpsp_scan_chunk', array( $job_id ) );
         } finally {
             delete_transient( $lock_key );
         }
@@ -449,24 +478,27 @@ class WP_Security_Pilot_Scanner {
                 'Core file integrity check failed.',
                 array( 'file' => $relative_path )
             );
+            return true;
         }
+        return false;
     }
 
     private function check_malware_signatures( $job_id, $file_path, $relative_path, $signatures, $config ) {
         $extension = strtolower( pathinfo( $file_path, PATHINFO_EXTENSION ) );
         if ( ! in_array( $extension, array( 'php', 'js' ), true ) ) {
-            return;
+            return false;
         }
 
         if ( filesize( $file_path ) > self::MAX_SCAN_BYTES ) {
-            return;
+            return false;
         }
 
         $contents = @file_get_contents( $file_path );
         if ( false === $contents ) {
-            return;
+            return false;
         }
 
+        $found = false;
         foreach ( $signatures as $signature ) {
             $pattern = $signature['pattern'];
             if ( $this->pattern_matches( $pattern, $contents ) ) {
@@ -485,7 +517,8 @@ class WP_Security_Pilot_Scanner {
                         'signature' => $signature['name'],
                     )
                 );
-                return;
+                $found = true;
+                return true;
             }
         }
 
@@ -499,8 +532,11 @@ class WP_Security_Pilot_Scanner {
                     'vuln_plugin',
                     sanitize_text_field( $custom_issue )
                 );
+                $found = true;
             }
         }
+
+        return $found;
     }
 
     private function log_result( $job_id, $file_path, $status, $issue_type, $details ) {
@@ -668,6 +704,108 @@ class WP_Security_Pilot_Scanner {
         return 'wpsp_scan_config_' . absint( $job_id );
     }
 
+    private function has_scan_cache_table() {
+        if ( null !== $this->scan_cache_table_exists ) {
+            return $this->scan_cache_table_exists;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'wpsp_scan_files';
+        $exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+        $this->scan_cache_table_exists = ( $exists === $table );
+
+        return $this->scan_cache_table_exists;
+    }
+
+    private function get_scan_cache_record( $relative_path ) {
+        if ( ! $this->has_scan_cache_table() ) {
+            return null;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'wpsp_scan_files';
+        return $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT file_hash, file_mtime, last_scanned, last_status
+                 FROM {$table}
+                 WHERE file_path = %s",
+                $relative_path
+            ),
+            ARRAY_A
+        );
+    }
+
+    private function should_skip_file( $relative_path, $file_path, $config ) {
+        if ( empty( $config['cache_enabled'] ) ) {
+            return false;
+        }
+
+        $record = $this->get_scan_cache_record( $relative_path );
+        if ( ! $record ) {
+            return false;
+        }
+
+        if ( ! empty( $record['last_status'] ) && in_array( $record['last_status'], array( 'flagged', 'modified' ), true ) ) {
+            return false;
+        }
+
+        $mtime = @filemtime( $file_path );
+        if ( false === $mtime ) {
+            return false;
+        }
+
+        if ( (int) $record['file_mtime'] !== (int) $mtime ) {
+            return false;
+        }
+
+        $recheck_days = isset( $config['cache_recheck_days'] ) ? absint( $config['cache_recheck_days'] ) : 0;
+        if ( $recheck_days < 1 ) {
+            return false;
+        }
+
+        $last_scanned = ! empty( $record['last_scanned'] ) ? strtotime( $record['last_scanned'] ) : 0;
+        if ( ! $last_scanned ) {
+            return false;
+        }
+
+        return ( time() - $last_scanned ) < ( $recheck_days * DAY_IN_SECONDS );
+    }
+
+    private function update_scan_cache_record( $relative_path, $file_path, $status ) {
+        if ( ! $this->has_scan_cache_table() ) {
+            return;
+        }
+
+        if ( ! file_exists( $file_path ) || ! is_readable( $file_path ) ) {
+            return;
+        }
+
+        $hash = $this->get_file_hash( $file_path );
+        $mtime = @filemtime( $file_path );
+        if ( false === $mtime ) {
+            $mtime = 0;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'wpsp_scan_files';
+        $wpdb->replace(
+            $table,
+            array(
+                'file_path'   => $relative_path,
+                'file_hash'   => $hash,
+                'file_mtime'  => (int) $mtime,
+                'last_scanned'=> current_time( 'mysql' ),
+                'last_status' => $status,
+            ),
+            array( '%s', '%s', '%d', '%s', '%s' )
+        );
+    }
+
+    private function get_file_hash( $file_path ) {
+        $hash = @md5_file( $file_path );
+        return $hash ? $hash : '';
+    }
+
     private function ensure_scan_is_scheduled( $job_id ) {
         $job_id = absint( $job_id );
         if ( ! $job_id ) {
@@ -724,6 +862,9 @@ class WP_Security_Pilot_Scanner {
         return array(
             'scan_intensity'     => WP_Security_Pilot_Settings::get_setting( array( 'scanner', 'scan_intensity' ), 'medium' ),
             'enable_auto_repair' => WP_Security_Pilot_Settings::get_setting( array( 'scanner', 'enable_auto_repair' ), false ),
+            'scan_speed'         => WP_Security_Pilot_Settings::get_setting( array( 'scanner', 'scan_speed' ), 3 ),
+            'cache_enabled'      => WP_Security_Pilot_Settings::get_setting( array( 'scanner', 'cache_enabled' ), true ),
+            'cache_recheck_days' => WP_Security_Pilot_Settings::get_setting( array( 'scanner', 'cache_recheck_days' ), 30 ),
         );
     }
 
@@ -736,6 +877,9 @@ class WP_Security_Pilot_Scanner {
         return array(
             'scan_intensity'     => isset( $config['scan_intensity'] ) ? $config['scan_intensity'] : 'medium',
             'enable_auto_repair' => ! empty( $config['enable_auto_repair'] ),
+            'scan_speed'         => isset( $config['scan_speed'] ) ? absint( $config['scan_speed'] ) : 3,
+            'cache_enabled'      => ! empty( $config['cache_enabled'] ),
+            'cache_recheck_days' => isset( $config['cache_recheck_days'] ) ? absint( $config['cache_recheck_days'] ) : 30,
         );
     }
 
@@ -753,5 +897,39 @@ class WP_Security_Pilot_Scanner {
 
     private function get_lock_key( $job_id ) {
         return 'wpsp_scan_lock_' . absint( $job_id );
+    }
+
+    private function get_chunk_size( $config ) {
+        $speed = isset( $config['scan_speed'] ) ? absint( $config['scan_speed'] ) : 3;
+        switch ( $speed ) {
+            case 1:
+                return 10;
+            case 2:
+                return 20;
+            case 4:
+                return 60;
+            case 5:
+                return 90;
+            case 3:
+            default:
+                return 35;
+        }
+    }
+
+    private function get_chunk_delay( $config ) {
+        $speed = isset( $config['scan_speed'] ) ? absint( $config['scan_speed'] ) : 3;
+        switch ( $speed ) {
+            case 1:
+                return 10;
+            case 2:
+                return 7;
+            case 4:
+                return 3;
+            case 5:
+                return 2;
+            case 3:
+            default:
+                return 5;
+        }
     }
 }

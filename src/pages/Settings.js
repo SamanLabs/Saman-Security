@@ -15,6 +15,9 @@ const defaultSettings = {
     scanner: {
         scan_intensity: 'medium',
         enable_auto_repair: false,
+        scan_speed: 3,
+        cache_enabled: true,
+        cache_recheck_days: 30,
     },
     notifications: {
         recipient_email: '',
@@ -203,6 +206,22 @@ const Settings = () => {
         return parsed.toLocaleString();
     };
 
+    const getScanSpeedLabel = (value) => {
+        switch (Number(value)) {
+            case 1:
+                return 'Gentle';
+            case 2:
+                return 'Balanced';
+            case 4:
+                return 'Fast';
+            case 5:
+                return 'Turbo';
+            case 3:
+            default:
+                return 'Standard';
+        }
+    };
+
     return (
         <div className="page">
             <div className="page-header">
@@ -343,6 +362,29 @@ const Settings = () => {
                     </div>
                     <div className="settings-row">
                         <div className="settings-label">
+                            <label htmlFor="scan-speed">Scan Speed</label>
+                            <p className="settings-help">Control how aggressively the scanner processes files.</p>
+                        </div>
+                        <div className="settings-control">
+                            <input
+                                id="scan-speed"
+                                type="range"
+                                min="1"
+                                max="5"
+                                step="1"
+                                value={settings.scanner.scan_speed}
+                                onChange={(event) => updateSection('scanner', 'scan_speed', Number(event.target.value))}
+                                disabled={isLoading || isSaving}
+                            />
+                            <div className="range-meta">
+                                <span>Slow</span>
+                                <strong>{getScanSpeedLabel(settings.scanner.scan_speed)}</strong>
+                                <span>Fast</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="settings-row">
+                        <div className="settings-label">
                             <label htmlFor="auto-repair">Auto Repair Core Files</label>
                             <p className="settings-help">Automatically restore modified WordPress core files.</p>
                         </div>
@@ -358,6 +400,42 @@ const Settings = () => {
                                 <span className="toggle-track" />
                                 <span className="toggle-text">{settings.scanner.enable_auto_repair ? 'Enabled' : 'Disabled'}</span>
                             </label>
+                        </div>
+                    </div>
+                    <div className="settings-row">
+                        <div className="settings-label">
+                            <label htmlFor="cache-enabled">Skip Unchanged Files</label>
+                            <p className="settings-help">Skip files that have not changed since the last clean scan.</p>
+                        </div>
+                        <div className="settings-control">
+                            <label className="toggle">
+                                <input
+                                    id="cache-enabled"
+                                    type="checkbox"
+                                    checked={settings.scanner.cache_enabled}
+                                    onChange={(event) => updateSection('scanner', 'cache_enabled', event.target.checked)}
+                                    disabled={isLoading || isSaving}
+                                />
+                                <span className="toggle-track" />
+                                <span className="toggle-text">{settings.scanner.cache_enabled ? 'Enabled' : 'Disabled'}</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div className="settings-row">
+                        <div className="settings-label">
+                            <label htmlFor="cache-recheck">Recheck Unchanged Files (Days)</label>
+                            <p className="settings-help">Force a full re-scan after this many days.</p>
+                        </div>
+                        <div className="settings-control">
+                            <input
+                                id="cache-recheck"
+                                type="number"
+                                min="1"
+                                max="365"
+                                value={settings.scanner.cache_recheck_days}
+                                onChange={(event) => updateSection('scanner', 'cache_recheck_days', Number(event.target.value))}
+                                disabled={isLoading || isSaving || !settings.scanner.cache_enabled}
+                            />
                         </div>
                     </div>
 
