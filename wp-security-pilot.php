@@ -25,6 +25,8 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/Core/class-firewall.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/Core/class-activity-logger.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/Core/class-hardening.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/Core/class-scanner.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/Core/class-settings.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/Core/class-notifications.php';
 
 function wp_security_pilot_install_schema() {
     global $wpdb;
@@ -183,6 +185,7 @@ function wp_security_pilot_seed_firewall_rules( $rules_table ) {
 
 function wp_security_pilot_activate() {
     wp_security_pilot_install_schema();
+    wp_security_pilot_schedule_cleanup();
 }
 
 register_activation_hook( __FILE__, 'wp_security_pilot_activate' );
@@ -193,6 +196,80 @@ function wp_security_pilot_maybe_upgrade() {
         wp_security_pilot_install_schema();
     }
 }
+
+function wp_security_pilot_schedule_cleanup() {
+    if ( ! wp_next_scheduled( 'wpsp_cleanup_logs' ) ) {
+        wp_schedule_event( time() + DAY_IN_SECONDS, 'daily', 'wpsp_cleanup_logs' );
+    }
+}
+
+function wp_security_pilot_cleanup_logs() {
+    $days = (int) WP_Security_Pilot_Settings::get_setting( array( 'general', 'log_retention_days' ), 30 );
+    if ( $days <= 0 ) {
+        return;
+    }
+
+    $cutoff = gmdate( 'Y-m-d H:i:s', time() - ( $days * DAY_IN_SECONDS ) );
+    global $wpdb;
+
+    $wpdb->query(
+        $wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}wpsp_activity_log WHERE created_at < %s",
+            $cutoff
+        )
+    );
+
+    $wpdb->query(
+        $wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}wpsp_scan_results WHERE created_at < %s",
+            $cutoff
+        )
+    );
+
+    $wpdb->query(
+        $wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}wpsp_scan_jobs WHERE completed_at IS NOT NULL AND completed_at < %s",
+            $cutoff
+        )
+    );
+}
+
+function wp_security_pilot_uninstall() {
+    $settings = get_option( WP_Security_Pilot_Settings::OPTION_KEY, array() );
+    $settings = is_array( $settings ) ? $settings : array();
+    $delete_data = isset( $settings['general']['delete_data_on_uninstall'] ) ? (bool) $settings['general']['delete_data_on_uninstall'] : false;
+
+    if ( ! $delete_data ) {
+        return;
+    }
+
+    global $wpdb;
+
+    $tables = array(
+        'wpsp_blocked_ips',
+        'wpsp_activity_log',
+        'wpsp_ip_list',
+        'wpsp_firewall_rules',
+        'wpsp_scan_jobs',
+        'wpsp_scan_results',
+        'wpsp_scan_ignore',
+    );
+
+    foreach ( $tables as $table ) {
+        $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}{$table}" );
+    }
+
+    wp_clear_scheduled_hook( 'wpsp_cleanup_logs' );
+    wp_clear_scheduled_hook( 'wpsp_scan_scheduled' );
+
+    delete_option( WP_Security_Pilot_Settings::OPTION_KEY );
+    delete_option( 'wp_security_pilot_hardening' );
+    delete_option( 'wpsp_blocked_countries' );
+    delete_option( 'wpsp_scan_schedule' );
+    delete_option( 'wp_security_pilot_schema_version' );
+}
+
+register_uninstall_hook( __FILE__, 'wp_security_pilot_uninstall' );
 
 function run_wp_security_pilot() {
     $plugin = new WP_Security_Pilot_Admin_Loader();
@@ -209,11 +286,23 @@ function run_wp_security_pilot() {
     add_action( 'wpsp_scan_scheduled', array( $scanner, 'run_scheduled_scan' ) );
 
     add_action( 'admin_init', 'wp_security_pilot_maybe_upgrade' );
+    add_action( 'admin_init', 'wp_security_pilot_schedule_cleanup' );
+    add_action( 'wpsp_cleanup_logs', 'wp_security_pilot_cleanup_logs' );
 
     add_action(
         'wp_login_failed',
         function( $username ) {
             WP_Security_Pilot_Activity_Logger::log_event( 'blocked', 'Brute force attempt', 0, '', $username );
+        }
+    );
+
+    add_action(
+        'wp_login',
+        function( $user_login ) {
+            if ( current_user_can( 'manage_options' ) ) {
+                WP_Security_Pilot_Activity_Logger::log_event( 'allowed', 'Admin login', get_current_user_id() );
+                WP_Security_Pilot_Notifications::send_alert( 'admin_login', 'Admin login detected.', array( 'user' => $user_login ) );
+            }
         }
     );
 

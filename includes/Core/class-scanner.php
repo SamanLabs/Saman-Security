@@ -32,7 +32,10 @@ class WP_Security_Pilot_Scanner {
         }
 
         $job_id = (int) $wpdb->insert_id;
-        $files = $this->collect_files();
+        $config = $this->get_scan_config_defaults();
+        update_option( $this->get_config_option_key( $job_id ), $config, false );
+
+        $files = $this->collect_files( $config );
         update_option( $this->get_queue_option_key( $job_id ), $files, false );
 
         $wpdb->update(
@@ -83,6 +86,7 @@ class WP_Security_Pilot_Scanner {
         $ignore_patterns = $this->get_ignore_patterns();
         $checksums = $this->get_core_checksums();
         $signatures = $this->get_malware_signatures();
+        $config = $this->get_scan_config( $job_id );
 
         $processed = 0;
         $last_message = '';
@@ -101,11 +105,13 @@ class WP_Security_Pilot_Scanner {
             $last_message = 'Scanning ' . $relative_path;
 
             if ( $this->is_core_file( $relative_path, $checksums ) ) {
-                $this->check_core_checksum( $job_id, $file_path, $relative_path, $checksums );
+                $this->check_core_checksum( $job_id, $file_path, $relative_path, $checksums, $config );
                 continue;
             }
 
-            $this->check_malware_signatures( $job_id, $file_path, $relative_path, $signatures );
+            if ( 'low' !== $config['scan_intensity'] ) {
+                $this->check_malware_signatures( $job_id, $file_path, $relative_path, $signatures, $config );
+            }
         }
 
         $new_processed = min( (int) $job['processed_files'] + $processed, (int) $job['total_files'] );
@@ -139,6 +145,7 @@ class WP_Security_Pilot_Scanner {
 
         wp_clear_scheduled_hook( 'wpsp_scan_chunk', array( $job_id ) );
         delete_option( $this->get_queue_option_key( $job_id ) );
+        delete_option( $this->get_config_option_key( $job_id ) );
 
         $updated = $wpdb->update(
             $wpdb->prefix . 'wpsp_scan_jobs',
@@ -320,6 +327,7 @@ class WP_Security_Pilot_Scanner {
         );
 
         delete_option( $this->get_queue_option_key( $job_id ) );
+        delete_option( $this->get_config_option_key( $job_id ) );
 
         if ( class_exists( 'WP_Security_Pilot_Activity_Logger' ) ) {
             WP_Security_Pilot_Activity_Logger::log_event( 'alert', 'Scan completed', get_current_user_id() );
@@ -340,7 +348,7 @@ class WP_Security_Pilot_Scanner {
         );
     }
 
-    private function collect_files() {
+    private function collect_files( $config ) {
         $files = array();
         $checksums = $this->get_core_checksums();
 
@@ -351,12 +359,19 @@ class WP_Security_Pilot_Scanner {
             }
         }
 
-        $scan_dirs = array(
-            WP_CONTENT_DIR . '/plugins',
-            WP_CONTENT_DIR . '/mu-plugins',
-            WP_CONTENT_DIR . '/themes',
-            WP_CONTENT_DIR . '/uploads',
-        );
+        $scan_dirs = array();
+
+        if ( 'low' !== $config['scan_intensity'] ) {
+            $scan_dirs = array(
+                WP_CONTENT_DIR . '/plugins',
+                WP_CONTENT_DIR . '/mu-plugins',
+                WP_CONTENT_DIR . '/themes',
+            );
+        }
+
+        if ( 'high' === $config['scan_intensity'] ) {
+            $scan_dirs[] = WP_CONTENT_DIR . '/uploads';
+        }
 
         foreach ( $scan_dirs as $dir ) {
             if ( ! is_dir( $dir ) ) {
@@ -389,10 +404,13 @@ class WP_Security_Pilot_Scanner {
         return in_array( $extension, array( 'php', 'js' ), true );
     }
 
-    private function check_core_checksum( $job_id, $file_path, $relative_path, $checksums ) {
+    private function check_core_checksum( $job_id, $file_path, $relative_path, $checksums, $config ) {
         $expected = $checksums[ $relative_path ];
         $hash = @md5_file( $file_path );
         if ( false === $hash || $hash !== $expected ) {
+            if ( ! empty( $config['enable_auto_repair'] ) ) {
+                $this->attempt_auto_repair( $relative_path, $file_path );
+            }
             $this->log_result(
                 $job_id,
                 $relative_path,
@@ -400,10 +418,15 @@ class WP_Security_Pilot_Scanner {
                 'core_checksum',
                 'Checksum mismatch'
             );
+            WP_Security_Pilot_Notifications::send_alert(
+                'core_file_modified',
+                'Core file integrity check failed.',
+                array( 'file' => $relative_path )
+            );
         }
     }
 
-    private function check_malware_signatures( $job_id, $file_path, $relative_path, $signatures ) {
+    private function check_malware_signatures( $job_id, $file_path, $relative_path, $signatures, $config ) {
         $extension = strtolower( pathinfo( $file_path, PATHINFO_EXTENSION ) );
         if ( ! in_array( $extension, array( 'php', 'js' ), true ) ) {
             return;
@@ -428,19 +451,29 @@ class WP_Security_Pilot_Scanner {
                     'malware_signature',
                     $signature['name']
                 );
+                WP_Security_Pilot_Notifications::send_alert(
+                    'malware_found',
+                    'Malware signature detected.',
+                    array(
+                        'file'      => $relative_path,
+                        'signature' => $signature['name'],
+                    )
+                );
                 return;
             }
         }
 
-        $custom_issue = apply_filters( 'wpsp_scanner_vulnerability', null, $file_path );
-        if ( $custom_issue ) {
-            $this->log_result(
-                $job_id,
-                $relative_path,
-                'flagged',
-                'vuln_plugin',
-                sanitize_text_field( $custom_issue )
-            );
+        if ( 'high' === $config['scan_intensity'] ) {
+            $custom_issue = apply_filters( 'wpsp_scanner_vulnerability', null, $file_path );
+            if ( $custom_issue ) {
+                $this->log_result(
+                    $job_id,
+                    $relative_path,
+                    'flagged',
+                    'vuln_plugin',
+                    sanitize_text_field( $custom_issue )
+                );
+            }
         }
     }
 
@@ -551,6 +584,41 @@ class WP_Security_Pilot_Scanner {
         return ltrim( str_replace( '\\', '/', str_replace( ABSPATH, '', $path ) ), '/' );
     }
 
+    private function attempt_auto_repair( $relative_path, $file_path ) {
+        if ( ! wp_is_writable( $file_path ) ) {
+            return false;
+        }
+
+        $version = get_bloginfo( 'version' );
+        $url = sprintf(
+            'https://core.svn.wordpress.org/tags/%s/%s',
+            rawurlencode( $version ),
+            ltrim( $relative_path, '/' )
+        );
+
+        $response = wp_safe_remote_get( $url, array( 'timeout' => 10 ) );
+        if ( is_wp_error( $response ) ) {
+            return false;
+        }
+
+        $status = wp_remote_retrieve_response_code( $response );
+        if ( 200 !== $status ) {
+            return false;
+        }
+
+        $body = wp_remote_retrieve_body( $response );
+        if ( empty( $body ) ) {
+            return false;
+        }
+
+        $written = file_put_contents( $file_path, $body );
+        if ( false === $written ) {
+            return false;
+        }
+
+        return true;
+    }
+
     private function is_ignored( $path, $patterns ) {
         if ( empty( $patterns ) ) {
             return false;
@@ -568,6 +636,29 @@ class WP_Security_Pilot_Scanner {
 
     private function get_queue_option_key( $job_id ) {
         return 'wpsp_scan_queue_' . absint( $job_id );
+    }
+
+    private function get_config_option_key( $job_id ) {
+        return 'wpsp_scan_config_' . absint( $job_id );
+    }
+
+    private function get_scan_config_defaults() {
+        return array(
+            'scan_intensity'     => WP_Security_Pilot_Settings::get_setting( array( 'scanner', 'scan_intensity' ), 'medium' ),
+            'enable_auto_repair' => WP_Security_Pilot_Settings::get_setting( array( 'scanner', 'enable_auto_repair' ), false ),
+        );
+    }
+
+    private function get_scan_config( $job_id ) {
+        $config = get_option( $this->get_config_option_key( $job_id ), array() );
+        if ( ! is_array( $config ) || empty( $config ) ) {
+            $config = $this->get_scan_config_defaults();
+        }
+
+        return array(
+            'scan_intensity'     => isset( $config['scan_intensity'] ) ? $config['scan_intensity'] : 'medium',
+            'enable_auto_repair' => ! empty( $config['enable_auto_repair'] ),
+        );
     }
 
     private function get_next_schedule_timestamp( $time, $frequency ) {

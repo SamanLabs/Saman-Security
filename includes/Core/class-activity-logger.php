@@ -27,6 +27,9 @@ class WP_Security_Pilot_Activity_Logger {
         }
 
         $ip_address = $ip_address ? self::sanitize_ip( $ip_address ) : self::get_client_ip();
+        if ( class_exists( 'WP_Security_Pilot_Settings' ) ) {
+            $ip_address = WP_Security_Pilot_Settings::anonymize_ip( $ip_address );
+        }
 
         $wpdb->insert(
             $table_name,

@@ -24,6 +24,11 @@ class WP_Security_Pilot_Firewall {
             return;
         }
 
+        if ( $this->is_autoblocked( $ip_address ) ) {
+            $this->block_request( 'Rate limit auto-block', $ip_address );
+            return;
+        }
+
         if ( $this->is_geo_blocked( $ip_address ) ) {
             $this->block_request( 'Geo-blocked region', $ip_address );
             return;
@@ -31,6 +36,7 @@ class WP_Security_Pilot_Firewall {
 
         $rule_match = $this->check_traffic_rules();
         if ( $rule_match ) {
+            $this->record_rate_limit_hit( $ip_address );
             $this->block_request( $rule_match['message'], $ip_address, $rule_match );
         }
     }
@@ -174,6 +180,54 @@ class WP_Security_Pilot_Firewall {
         return null;
     }
 
+    private function is_autoblocked( $ip_address ) {
+        $key = $this->get_autoblock_key( $ip_address );
+        return (bool) get_transient( $key );
+    }
+
+    private function record_rate_limit_hit( $ip_address ) {
+        $threshold = (int) WP_Security_Pilot_Settings::get_setting( array( 'firewall', 'ratelimit_threshold' ), 10 );
+        $period = (int) WP_Security_Pilot_Settings::get_setting( array( 'firewall', 'ratelimit_period_seconds' ), 60 );
+        $duration = (int) WP_Security_Pilot_Settings::get_setting( array( 'firewall', 'autoblock_duration_minutes' ), 60 );
+
+        if ( $threshold <= 0 || $period <= 0 || $duration <= 0 ) {
+            return;
+        }
+
+        $key = $this->get_rate_limit_key( $ip_address );
+        $data = get_transient( $key );
+        $now = time();
+
+        if ( ! is_array( $data ) ) {
+            $data = array(
+                'count' => 0,
+                'start' => $now,
+            );
+        }
+
+        if ( ( $now - $data['start'] ) > $period ) {
+            $data = array(
+                'count' => 0,
+                'start' => $now,
+            );
+        }
+
+        $data['count']++;
+        set_transient( $key, $data, $period );
+
+        if ( $data['count'] >= $threshold ) {
+            set_transient( $this->get_autoblock_key( $ip_address ), 1, $duration * MINUTE_IN_SECONDS );
+            if ( class_exists( 'WP_Security_Pilot_Activity_Logger' ) ) {
+                WP_Security_Pilot_Activity_Logger::log_event( 'blocked', 'Firewall auto-block triggered', 0, $ip_address );
+            }
+            WP_Security_Pilot_Notifications::send_alert(
+                'firewall_block',
+                'Firewall auto-block triggered due to repeated rule matches.',
+                array( 'ip' => $ip_address )
+            );
+        }
+    }
+
     private function get_target_values( $target_area ) {
         switch ( $target_area ) {
             case 'GET':
@@ -264,11 +318,28 @@ class WP_Security_Pilot_Firewall {
             WP_Security_Pilot_Activity_Logger::log_event( 'blocked', $message, 0, $ip_address );
         }
 
+        WP_Security_Pilot_Notifications::send_alert(
+            'firewall_block',
+            $reason,
+            array(
+                'ip'   => $ip_address,
+                'rule' => isset( $rule_match['description'] ) ? $rule_match['description'] : '',
+            )
+        );
+
         wp_die(
             esc_html__( 'You are blocked from accessing this site.', 'wp-security-pilot' ),
             esc_html__( 'Access denied', 'wp-security-pilot' ),
             array( 'response' => 403 )
         );
+    }
+
+    private function get_rate_limit_key( $ip_address ) {
+        return 'wpsp_fw_hits_' . md5( $ip_address );
+    }
+
+    private function get_autoblock_key( $ip_address ) {
+        return 'wpsp_fw_autoblock_' . md5( $ip_address );
     }
 
     private function get_client_ip() {

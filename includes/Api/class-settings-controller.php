@@ -24,17 +24,56 @@ class WP_Security_Pilot_Settings_Controller extends WP_REST_Controller {
                 ),
             )
         );
+
+        register_rest_route(
+            $this->namespace,
+            '/' . $this->rest_base . '/api-keys',
+            array(
+                array(
+                    'methods'             => WP_REST_Server::CREATABLE,
+                    'callback'            => array( $this, 'create_api_key' ),
+                    'permission_callback' => array( $this, 'create_item_permissions_check' ),
+                ),
+            )
+        );
+
+        register_rest_route(
+            $this->namespace,
+            '/' . $this->rest_base . '/api-keys/(?P<prefix>[a-zA-Z0-9_-]+)',
+            array(
+                array(
+                    'methods'             => WP_REST_Server::DELETABLE,
+                    'callback'            => array( $this, 'delete_api_key' ),
+                    'permission_callback' => array( $this, 'create_item_permissions_check' ),
+                ),
+            )
+        );
     }
 
     public function get_items( $request ) {
-        $options = get_option( 'wp_security_pilot_settings', array() );
-        return rest_ensure_response( $options );
+        return rest_ensure_response( WP_Security_Pilot_Settings::get_settings() );
     }
 
     public function create_item( $request ) {
         $params = $request->get_json_params();
-        update_option( 'wp_security_pilot_settings', $params );
-        return rest_ensure_response( array( 'success' => true ) );
+        $settings = WP_Security_Pilot_Settings::update_settings( $params );
+        return rest_ensure_response( $settings );
+    }
+
+    public function create_api_key( $request ) {
+        $params = $request->get_json_params();
+        $label = isset( $params['label'] ) ? $params['label'] : '';
+
+        $data = WP_Security_Pilot_Settings::generate_api_key( $label );
+
+        return rest_ensure_response( $data );
+    }
+
+    public function delete_api_key( $request ) {
+        $prefix = $request['prefix'];
+        $keys = WP_Security_Pilot_Settings::revoke_api_key( $prefix );
+
+        return rest_ensure_response( $keys );
     }
 
     public function get_items_permissions_check( $request ) {

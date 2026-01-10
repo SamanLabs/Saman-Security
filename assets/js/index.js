@@ -2888,81 +2888,561 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "react");
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @wordpress/api-fetch */ "@wordpress/api-fetch");
+/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @wordpress/element */ "@wordpress/element");
+/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_wordpress_element__WEBPACK_IMPORTED_MODULE_2__);
 
+
+
+const defaultSettings = {
+  general: {
+    ip_anonymization: true,
+    log_retention_days: 30,
+    delete_data_on_uninstall: false
+  },
+  firewall: {
+    ratelimit_threshold: 10,
+    ratelimit_period_seconds: 60,
+    autoblock_duration_minutes: 60
+  },
+  scanner: {
+    scan_intensity: 'medium',
+    enable_auto_repair: false
+  },
+  notifications: {
+    recipient_email: '',
+    alerts: {
+      on_firewall_block: true,
+      on_malware_found: true,
+      on_core_file_modified: true,
+      on_admin_login: false
+    },
+    weekly_summary_enabled: true
+  },
+  integrations: {
+    slack: {
+      webhook_url: ''
+    }
+  },
+  updated_at: ''
+};
 const Settings = () => {
+  const [settings, setSettings] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_2__.useState)(defaultSettings);
+  const [apiKeys, setApiKeys] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_2__.useState)([]);
+  const [generatedKey, setGeneratedKey] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_2__.useState)('');
+  const [newKeyLabel, setNewKeyLabel] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_2__.useState)('');
+  const [isLoading, setIsLoading] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_2__.useState)(true);
+  const [isSaving, setIsSaving] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_2__.useState)(false);
+  const [isKeySaving, setIsKeySaving] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_2__.useState)(false);
+  const [isKeyRemoving, setIsKeyRemoving] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_2__.useState)(null);
+  const [errorMessage, setErrorMessage] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_2__.useState)('');
+  const [keyErrorMessage, setKeyErrorMessage] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_2__.useState)('');
+  const fetchSettings = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_2__.useCallback)(async () => {
+    setIsLoading(true);
+    setErrorMessage('');
+    try {
+      const data = await _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_1___default()({
+        path: '/wp-security-pilot/v1/settings'
+      });
+      const {
+        api_keys: apiKeysFromApi,
+        ...rest
+      } = data || {};
+      const merged = {
+        ...defaultSettings,
+        ...rest,
+        general: {
+          ...defaultSettings.general,
+          ...(rest?.general || {})
+        },
+        firewall: {
+          ...defaultSettings.firewall,
+          ...(rest?.firewall || {})
+        },
+        scanner: {
+          ...defaultSettings.scanner,
+          ...(rest?.scanner || {})
+        },
+        notifications: {
+          ...defaultSettings.notifications,
+          ...(rest?.notifications || {}),
+          alerts: {
+            ...defaultSettings.notifications.alerts,
+            ...(rest?.notifications?.alerts || {})
+          }
+        },
+        integrations: {
+          ...defaultSettings.integrations,
+          ...(rest?.integrations || {}),
+          slack: {
+            ...defaultSettings.integrations.slack,
+            ...(rest?.integrations?.slack || {})
+          }
+        }
+      };
+      setSettings(merged);
+      setApiKeys(Array.isArray(apiKeysFromApi) ? apiKeysFromApi : []);
+    } catch (error) {
+      setErrorMessage(error?.message || 'Unable to load settings.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_2__.useEffect)(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+  const updateSection = (section, key, value) => {
+    setSettings(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [key]: value
+      }
+    }));
+  };
+  const updateAlert = (key, value) => {
+    setSettings(prev => ({
+      ...prev,
+      notifications: {
+        ...prev.notifications,
+        alerts: {
+          ...prev.notifications.alerts,
+          [key]: value
+        }
+      }
+    }));
+  };
+  const saveSettings = async overrideSettings => {
+    setIsSaving(true);
+    setErrorMessage('');
+    try {
+      const payload = overrideSettings || settings;
+      const data = await _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_1___default()({
+        path: '/wp-security-pilot/v1/settings',
+        method: 'POST',
+        data: payload
+      });
+      const {
+        api_keys: apiKeysFromApi,
+        ...rest
+      } = data || {};
+      const merged = {
+        ...defaultSettings,
+        ...rest,
+        general: {
+          ...defaultSettings.general,
+          ...(rest?.general || {})
+        },
+        firewall: {
+          ...defaultSettings.firewall,
+          ...(rest?.firewall || {})
+        },
+        scanner: {
+          ...defaultSettings.scanner,
+          ...(rest?.scanner || {})
+        },
+        notifications: {
+          ...defaultSettings.notifications,
+          ...(rest?.notifications || {}),
+          alerts: {
+            ...defaultSettings.notifications.alerts,
+            ...(rest?.notifications?.alerts || {})
+          }
+        },
+        integrations: {
+          ...defaultSettings.integrations,
+          ...(rest?.integrations || {}),
+          slack: {
+            ...defaultSettings.integrations.slack,
+            ...(rest?.integrations?.slack || {})
+          }
+        }
+      };
+      setSettings(merged);
+      setApiKeys(Array.isArray(apiKeysFromApi) ? apiKeysFromApi : apiKeys);
+    } catch (error) {
+      setErrorMessage(error?.message || 'Unable to save settings.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  const resetDefaults = () => {
+    setGeneratedKey('');
+    setSettings(defaultSettings);
+    saveSettings(defaultSettings);
+  };
+  const generateApiKey = async () => {
+    setIsKeySaving(true);
+    setKeyErrorMessage('');
+    try {
+      const data = await _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_1___default()({
+        path: '/wp-security-pilot/v1/settings/api-keys',
+        method: 'POST',
+        data: {
+          label: newKeyLabel
+        }
+      });
+      setGeneratedKey(data?.key || '');
+      if (data?.entry) {
+        setApiKeys(prev => [...prev, data.entry]);
+      } else {
+        await fetchSettings();
+      }
+      setNewKeyLabel('');
+    } catch (error) {
+      setKeyErrorMessage(error?.message || 'Unable to generate API key.');
+    } finally {
+      setIsKeySaving(false);
+    }
+  };
+  const revokeApiKey = async prefix => {
+    setIsKeyRemoving(prefix);
+    setKeyErrorMessage('');
+    try {
+      const data = await _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_1___default()({
+        path: `/wp-security-pilot/v1/settings/api-keys/${prefix}`,
+        method: 'DELETE'
+      });
+      setApiKeys(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setKeyErrorMessage(error?.message || 'Unable to revoke API key.');
+    } finally {
+      setIsKeyRemoving(null);
+    }
+  };
+  const formatDate = dateString => {
+    if (!dateString) {
+      return 'Not saved yet';
+    }
+    const normalized = dateString.includes('T') ? dateString : dateString.replace(' ', 'T');
+    const parsed = new Date(normalized);
+    if (Number.isNaN(parsed.getTime())) {
+      return dateString;
+    }
+    return parsed.toLocaleString();
+  };
   return (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "page"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "page-header"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("h1", null, "Settings"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", null, "Manage notifications, API keys, and global preferences.")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("button", {
     type: "button",
-    className: "button ghost"
+    className: "button ghost",
+    onClick: resetDefaults,
+    disabled: isSaving
   }, "Reset Defaults")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "page-body two-column"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("section", {
     className: "panel"
-  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("h3", null, "Notifications"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-    className: "settings-row compact"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("h3", null, "General Settings"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-row"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "settings-label"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
-    htmlFor: "email-alerts"
-  }, "Email Alerts"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+    htmlFor: "ip-anonymization"
+  }, "IP Anonymization"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
     className: "settings-help"
-  }, "Send critical alerts to the site owner.")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+  }, "Mask the last segment of IPs stored in logs.")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "settings-control"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
     className: "toggle"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
-    id: "email-alerts",
+    id: "ip-anonymization",
     type: "checkbox",
-    defaultChecked: true
+    checked: settings.general.ip_anonymization,
+    onChange: event => updateSection('general', 'ip_anonymization', event.target.checked),
+    disabled: isLoading || isSaving
   }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
     className: "toggle-track"
   }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
     className: "toggle-text"
-  }, "Enabled")))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
-    className: "settings-row compact"
+  }, settings.general.ip_anonymization ? 'Enabled' : 'Disabled')))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-row"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "settings-label"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
-    htmlFor: "summary-reports"
+    htmlFor: "log-retention"
+  }, "Log Retention (Days)"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+    className: "settings-help"
+  }, "Automatically purge logs older than this many days.")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-control"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
+    id: "log-retention",
+    type: "number",
+    min: "0",
+    value: settings.general.log_retention_days,
+    onChange: event => updateSection('general', 'log_retention_days', Number(event.target.value)),
+    disabled: isLoading || isSaving
+  }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-row"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-label"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
+    htmlFor: "delete-on-uninstall"
+  }, "Delete Data on Uninstall"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+    className: "settings-help"
+  }, "Remove all plugin data when the plugin is deleted.")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-control"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
+    className: "toggle"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
+    id: "delete-on-uninstall",
+    type: "checkbox",
+    checked: settings.general.delete_data_on_uninstall,
+    onChange: event => updateSection('general', 'delete_data_on_uninstall', event.target.checked),
+    disabled: isLoading || isSaving
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
+    className: "toggle-track"
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
+    className: "toggle-text"
+  }, settings.general.delete_data_on_uninstall ? 'Enabled' : 'Disabled')))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("h3", null, "Firewall Controls"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-row"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-label"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
+    htmlFor: "rate-threshold"
+  }, "Rate Limit Threshold"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+    className: "settings-help"
+  }, "Number of rule hits before auto-blocking.")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-control"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
+    id: "rate-threshold",
+    type: "number",
+    min: "1",
+    value: settings.firewall.ratelimit_threshold,
+    onChange: event => updateSection('firewall', 'ratelimit_threshold', Number(event.target.value)),
+    disabled: isLoading || isSaving
+  }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-row"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-label"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
+    htmlFor: "rate-period"
+  }, "Rate Limit Period (Seconds)"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+    className: "settings-help"
+  }, "Time window used to count repeated hits.")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-control"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
+    id: "rate-period",
+    type: "number",
+    min: "10",
+    value: settings.firewall.ratelimit_period_seconds,
+    onChange: event => updateSection('firewall', 'ratelimit_period_seconds', Number(event.target.value)),
+    disabled: isLoading || isSaving
+  }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-row"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-label"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
+    htmlFor: "autoblock-duration"
+  }, "Auto-Block Duration (Minutes)"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+    className: "settings-help"
+  }, "How long auto-blocks remain active.")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-control"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
+    id: "autoblock-duration",
+    type: "number",
+    min: "1",
+    value: settings.firewall.autoblock_duration_minutes,
+    onChange: event => updateSection('firewall', 'autoblock_duration_minutes', Number(event.target.value)),
+    disabled: isLoading || isSaving
+  }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("h3", null, "Scanner Controls"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-row"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-label"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
+    htmlFor: "scan-intensity"
+  }, "Scan Intensity"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+    className: "settings-help"
+  }, "Balance depth of scanning with server load.")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-control"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("select", {
+    id: "scan-intensity",
+    value: settings.scanner.scan_intensity,
+    onChange: event => updateSection('scanner', 'scan_intensity', event.target.value),
+    disabled: isLoading || isSaving
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("option", {
+    value: "low"
+  }, "Low (Core Only)"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("option", {
+    value: "medium"
+  }, "Medium (Core + Plugins/Themes)"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("option", {
+    value: "high"
+  }, "High (Full Coverage)")))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-row"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-label"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
+    htmlFor: "auto-repair"
+  }, "Auto Repair Core Files"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+    className: "settings-help"
+  }, "Automatically restore modified WordPress core files.")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-control"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
+    className: "toggle"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
+    id: "auto-repair",
+    type: "checkbox",
+    checked: settings.scanner.enable_auto_repair,
+    onChange: event => updateSection('scanner', 'enable_auto_repair', event.target.checked),
+    disabled: isLoading || isSaving
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
+    className: "toggle-track"
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
+    className: "toggle-text"
+  }, settings.scanner.enable_auto_repair ? 'Enabled' : 'Disabled')))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("h3", null, "Notifications"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-row"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-label"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
+    htmlFor: "recipient-email"
+  }, "Recipient Email"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+    className: "settings-help"
+  }, "Override the site admin email for alerts.")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-control"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
+    id: "recipient-email",
+    type: "text",
+    placeholder: "security-team@example.com",
+    value: settings.notifications.recipient_email,
+    onChange: event => updateSection('notifications', 'recipient_email', event.target.value),
+    disabled: isLoading || isSaving
+  }))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-row"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-label"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", null, "Alert Types"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+    className: "settings-help"
+  }, "Choose which events trigger notifications.")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-control"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "checkbox-group"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
+    className: "checkbox"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
+    type: "checkbox",
+    checked: settings.notifications.alerts.on_firewall_block,
+    onChange: event => updateAlert('on_firewall_block', event.target.checked),
+    disabled: isLoading || isSaving
+  }), "Firewall blocks"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
+    className: "checkbox"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
+    type: "checkbox",
+    checked: settings.notifications.alerts.on_malware_found,
+    onChange: event => updateAlert('on_malware_found', event.target.checked),
+    disabled: isLoading || isSaving
+  }), "Malware detected"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
+    className: "checkbox"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
+    type: "checkbox",
+    checked: settings.notifications.alerts.on_core_file_modified,
+    onChange: event => updateAlert('on_core_file_modified', event.target.checked),
+    disabled: isLoading || isSaving
+  }), "Core file modified"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
+    className: "checkbox"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
+    type: "checkbox",
+    checked: settings.notifications.alerts.on_admin_login,
+    onChange: event => updateAlert('on_admin_login', event.target.checked),
+    disabled: isLoading || isSaving
+  }), "Admin login")))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-row"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-label"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
+    htmlFor: "weekly-summary"
   }, "Weekly Summary"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
     className: "settings-help"
-  }, "Receive a digest of security events.")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+  }, "Send a weekly security digest.")), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "settings-control"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("label", {
     className: "toggle"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
-    id: "summary-reports",
-    type: "checkbox"
+    id: "weekly-summary",
+    type: "checkbox",
+    checked: settings.notifications.weekly_summary_enabled,
+    onChange: event => updateSection('notifications', 'weekly_summary_enabled', event.target.checked),
+    disabled: isLoading || isSaving
   }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
     className: "toggle-track"
   }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
     className: "toggle-text"
-  }, "Disabled"))))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("aside", {
+  }, settings.notifications.weekly_summary_enabled ? 'Enabled' : 'Disabled')))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "form-footer"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("button", {
+    type: "button",
+    className: "button primary",
+    onClick: () => saveSettings(),
+    disabled: isLoading || isSaving
+  }, isSaving ? 'Saving...' : 'Save Settings'), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
+    className: "muted"
+  }, "Last saved ", formatDate(settings.updated_at), "."), errorMessage ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+    className: "form-error"
+  }, errorMessage) : null)), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("aside", {
     className: "side-panel"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "side-card"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("h3", null, "API Keys"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
     className: "muted"
-  }, "Generate a key to connect external dashboards."), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("button", {
+  }, "Generate keys to connect external dashboards."), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "inline-form"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
+    type: "text",
+    placeholder: "Key label",
+    value: newKeyLabel,
+    onChange: event => setNewKeyLabel(event.target.value),
+    disabled: isKeySaving
+  }), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("button", {
     type: "button",
-    className: "button primary"
-  }, "Generate Key"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "button primary",
+    onClick: generateApiKey,
+    disabled: isKeySaving
+  }, isKeySaving ? 'Generating...' : 'Generate Key')), keyErrorMessage ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+    className: "form-error"
+  }, keyErrorMessage) : null, generatedKey ? (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "key-preview"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
     className: "muted"
-  }, "Key:"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
+  }, "New Key (copy now):"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("span", {
     className: "code"
-  }, "wpsp_live_3fd1...d2"))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+  }, generatedKey)) : null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "api-key-list"
+  }, apiKeys.length ? apiKeys.map(key => (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    key: key.key_prefix,
+    className: "api-key-row"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", null, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "api-key-label"
+  }, key.label || 'API Key'), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "muted"
+  }, key.key_prefix)), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("button", {
+    type: "button",
+    className: "link-button",
+    onClick: () => revokeApiKey(key.key_prefix),
+    disabled: isKeyRemoving === key.key_prefix
+  }, isKeyRemoving === key.key_prefix ? 'Revoking...' : 'Revoke'))) : (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
+    className: "muted"
+  }, "No API keys generated yet."))), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
     className: "side-card highlight"
   }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("h3", null, "Integrations"), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("p", {
     className: "muted"
-  }, "Connect Slack, webhooks, and custom endpoints."), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("button", {
-    type: "button",
-    className: "button ghost"
-  }, "Add Integration")))));
+  }, "Connect Slack, webhooks, and custom endpoints."), (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("div", {
+    className: "settings-control"
+  }, (0,react__WEBPACK_IMPORTED_MODULE_0__.createElement)("input", {
+    type: "text",
+    placeholder: "Slack webhook URL",
+    value: settings.integrations.slack.webhook_url,
+    onChange: event => setSettings(prev => ({
+      ...prev,
+      integrations: {
+        ...prev.integrations,
+        slack: {
+          ...prev.integrations.slack,
+          webhook_url: event.target.value
+        }
+      }
+    })),
+    disabled: isLoading || isSaving
+  }))))));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Settings);
 
