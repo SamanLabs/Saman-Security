@@ -1,5 +1,15 @@
 <?php
 class WP_Security_Pilot_Admin_Loader {
+    private $view_map = array(
+        'wp-security-pilot' => 'dashboard',
+        'wp-security-pilot-dashboard' => 'dashboard',
+        'wp-security-pilot-firewall' => 'firewall',
+        'wp-security-pilot-scanner' => 'scanner',
+        'wp-security-pilot-hardening' => 'hardening',
+        'wp-security-pilot-activity' => 'activity',
+        'wp-security-pilot-settings' => 'settings',
+        'wp-security-pilot-more' => 'more',
+    );
 
     public function __construct() {
         require_once plugin_dir_path( __FILE__ ) . 'Api/class-settings-controller.php';
@@ -27,6 +37,69 @@ class WP_Security_Pilot_Admin_Loader {
             'dashicons-shield-alt',
             100
         );
+
+        add_submenu_page(
+            'wp-security-pilot',
+            'Dashboard',
+            'Dashboard',
+            'manage_options',
+            'wp-security-pilot-dashboard',
+            array( $this, 'display_plugin_admin_page' )
+        );
+
+        add_submenu_page(
+            'wp-security-pilot',
+            'Firewall',
+            'Firewall',
+            'manage_options',
+            'wp-security-pilot-firewall',
+            array( $this, 'display_plugin_admin_page' )
+        );
+
+        add_submenu_page(
+            'wp-security-pilot',
+            'Scanner',
+            'Scanner',
+            'manage_options',
+            'wp-security-pilot-scanner',
+            array( $this, 'display_plugin_admin_page' )
+        );
+
+        add_submenu_page(
+            'wp-security-pilot',
+            'Hardening',
+            'Hardening',
+            'manage_options',
+            'wp-security-pilot-hardening',
+            array( $this, 'display_plugin_admin_page' )
+        );
+
+        add_submenu_page(
+            'wp-security-pilot',
+            'Activity Log',
+            'Activity Log',
+            'manage_options',
+            'wp-security-pilot-activity',
+            array( $this, 'display_plugin_admin_page' )
+        );
+
+        add_submenu_page(
+            'wp-security-pilot',
+            'Settings',
+            'Settings',
+            'manage_options',
+            'wp-security-pilot-settings',
+            array( $this, 'display_plugin_admin_page' )
+        );
+
+        add_submenu_page(
+            'wp-security-pilot',
+            'More',
+            'More',
+            'manage_options',
+            'wp-security-pilot-more',
+            array( $this, 'display_plugin_admin_page' )
+        );
     }
 
     public function display_plugin_admin_page() {
@@ -36,7 +109,7 @@ class WP_Security_Pilot_Admin_Loader {
     }
 
     public function enqueue_scripts( $hook ) {
-        if ( 'toplevel_page_wp-security-pilot' !== $hook ) {
+        if ( false === strpos( $hook, 'wp-security-pilot' ) ) {
             return;
         }
 
@@ -50,9 +123,27 @@ class WP_Security_Pilot_Admin_Loader {
 
         wp_enqueue_style(
             'wp-security-pilot-admin-style',
-            plugin_dir_url( __FILE__ ) . '../assets/css/index.css',
+            plugin_dir_url( __FILE__ ) . '../assets/js/index.css',
             array(),
             WP_SECURITY_PILOT_VERSION
         );
+
+        wp_localize_script(
+            'wp-security-pilot-admin-app',
+            'wpSecurityPilotSettings',
+            array(
+                'initialView' => $this->get_initial_view(),
+            )
+        );
+    }
+
+    private function get_initial_view() {
+        $page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : '';
+
+        if ( isset( $this->view_map[ $page ] ) ) {
+            return $this->view_map[ $page ];
+        }
+
+        return 'dashboard';
     }
 }
