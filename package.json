@@ -1,0 +1,25 @@
+{
+  "name": "wp-security-pilot",
+  "version": "0.0.1",
+  "description": "A smart security plugin for WordPress.",
+  "main": "index.js",
+  "scripts": {
+    "start": "wp-scripts start src/index.js --output-path=assets/js",
+    "build": "wp-scripts build src/index.js --output-path=assets/js"
+  },
+  "keywords": [
+    "wordpress",
+    "security",
+    "react"
+  ],
+  "author": "Your Name",
+  "license": "GPL-2.0+",
+  "devDependencies": {
+    "@wordpress/scripts": "^27.6.0"
+  },
+  "dependencies": {
+    "@wordpress/api-fetch": "^6.50.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
