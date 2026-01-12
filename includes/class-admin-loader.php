@@ -18,6 +18,7 @@ class WP_Security_Pilot_Admin_Loader {
         require_once plugin_dir_path( __FILE__ ) . 'Api/class-hardening-controller.php';
         require_once plugin_dir_path( __FILE__ ) . 'Api/class-scanner-controller.php';
         require_once plugin_dir_path( __FILE__ ) . 'Api/class-dashboard-controller.php';
+        require_once plugin_dir_path( __FILE__ ) . 'Api/class-updater-controller.php';
     }
 
     public function run() {
@@ -44,6 +45,9 @@ class WP_Security_Pilot_Admin_Loader {
 
         $dashboard_controller = new WP_Security_Pilot_Dashboard_Controller();
         $dashboard_controller->register_routes();
+
+        $updater_controller = new WP_Security_Pilot_Updater_Controller();
+        $updater_controller->register_routes();
     }
 
 

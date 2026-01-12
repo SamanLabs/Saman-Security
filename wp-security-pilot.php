@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) {
     die;
 }
 
-define( 'WP_SECURITY_PILOT_VERSION', '1.0.0' );
+define( 'WP_SECURITY_PILOT_VERSION', '0.0.1' );
 define( 'WP_SECURITY_PILOT_SCHEMA_VERSION', '3.1.0' );
 
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-admin-loader.php';
@@ -27,6 +27,10 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/Core/class-hardening.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/Core/class-scanner.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/Core/class-settings.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/Core/class-notifications.php';
+
+// Include updater classes
+require_once plugin_dir_path( __FILE__ ) . 'includes/Updater/class-github-updater.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/Updater/class-plugin-installer.php';
 
 function wp_security_pilot_install_schema() {
     global $wpdb;
@@ -290,6 +294,9 @@ register_uninstall_hook( __FILE__, 'wp_security_pilot_uninstall' );
 function run_wp_security_pilot() {
     $plugin = new WP_Security_Pilot_Admin_Loader();
     $plugin->run();
+
+    // Initialize GitHub updater
+    $updater = WP_Security_Pilot_GitHub_Updater::get_instance();
 
     $firewall = new WP_Security_Pilot_Firewall();
     add_action( 'init', array( $firewall, 'run' ) );
