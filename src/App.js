@@ -7,6 +7,7 @@ import Scanner from './pages/Scanner';
 import ActivityLog from './pages/ActivityLog';
 import Settings from './pages/Settings';
 import More from './pages/More';
+import { setAnalyticsEnabled, trackPageView } from './utils/analytics';
 
 const viewToPage = {
     dashboard: 'wp-security-pilot-dashboard',
@@ -25,6 +26,15 @@ const pageToView = Object.entries(viewToPage).reduce((acc, [view, page]) => {
 
 const App = ({ initialView = 'dashboard' }) => {
     const [currentView, setCurrentView] = useState(initialView);
+    const viewLabels = {
+        dashboard: 'Dashboard',
+        firewall: 'Firewall',
+        scanner: 'Scanner',
+        hardening: 'Hardening',
+        activity: 'Activity Log',
+        settings: 'Settings',
+        more: 'More',
+    };
 
     const updateAdminMenuHighlight = useCallback((view) => {
         if (typeof document === 'undefined') {
@@ -94,6 +104,24 @@ const App = ({ initialView = 'dashboard' }) => {
     useEffect(() => {
         updateAdminMenuHighlight(currentView);
     }, [currentView, updateAdminMenuHighlight]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        const analyticsConfig = window.wpSecurityPilotSettings?.analytics;
+        setAnalyticsEnabled(Boolean(analyticsConfig?.enabled), analyticsConfig || {});
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        const label = viewLabels[currentView] || 'Dashboard';
+        trackPageView(`/wp-security-pilot/${currentView}`, `WP Security Pilot - ${label}`);
+    }, [currentView]);
 
     useEffect(() => {
         const handleMenuClick = (event) => {

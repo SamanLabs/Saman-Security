@@ -178,7 +178,7 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** for guidelines.
 ## Privacy & Security
 
 - **Activity Logging**: Opt-in feature that stores only necessary security event data.
-- **No Telemetry**: Zero external tracking or analytics by default.
+- **Usage Analytics**: Anonymous admin-only usage analytics with an opt-out toggle.
 - **No External Requests**: All core processing happens on your server (except for optional cloud-based threat intelligence if explicitly enabled).
 
 ---

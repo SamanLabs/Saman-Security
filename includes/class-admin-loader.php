@@ -152,11 +152,26 @@ class WP_Security_Pilot_Admin_Loader {
             WP_SECURITY_PILOT_VERSION
         );
 
+        $settings = class_exists( 'WP_Security_Pilot_Settings' ) ? WP_Security_Pilot_Settings::get_settings() : array();
+        $analytics_settings = isset( $settings['analytics'] ) && is_array( $settings['analytics'] ) ? $settings['analytics'] : array();
+        $analytics_enabled = isset( $analytics_settings['enabled'] ) ? (bool) $analytics_settings['enabled'] : true;
+        $matomo_url = defined( 'WP_SECURITY_PILOT_MATOMO_URL' ) ? WP_SECURITY_PILOT_MATOMO_URL : 'https://matomo.builditdesign.com/';
+        $matomo_site_id = defined( 'WP_SECURITY_PILOT_MATOMO_SITE_ID' ) ? WP_SECURITY_PILOT_MATOMO_SITE_ID : '1';
+        $matomo_url = apply_filters( 'wp_security_pilot_matomo_url', $matomo_url );
+        $matomo_site_id = apply_filters( 'wp_security_pilot_matomo_site_id', $matomo_site_id );
+
         wp_localize_script(
             'wp-security-pilot-admin-app',
             'wpSecurityPilotSettings',
             array(
                 'initialView' => $this->get_initial_view(),
+                'analytics'   => array(
+                    'enabled'       => $analytics_enabled,
+                    'matomoUrl'     => esc_url_raw( $matomo_url ),
+                    'siteId'        => (string) $matomo_site_id,
+                    'siteHash'      => wp_hash( home_url() ),
+                    'pluginVersion' => WP_SECURITY_PILOT_VERSION,
+                ),
             )
         );
     }

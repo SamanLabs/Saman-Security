@@ -37,6 +37,9 @@ class WP_Security_Pilot_Settings {
                     'webhook_url' => '',
                 ),
             ),
+            'analytics'    => array(
+                'enabled' => true,
+            ),
             'api_keys'    => array(),
             'updated_at'  => '',
         );
@@ -73,6 +76,7 @@ class WP_Security_Pilot_Settings {
         $scanner = self::merge_section( $defaults['scanner'], $existing, $settings, 'scanner' );
         $notifications = self::merge_section( $defaults['notifications'], $existing, $settings, 'notifications' );
         $integrations = self::merge_section( $defaults['integrations'], $existing, $settings, 'integrations' );
+        $analytics = self::merge_section( $defaults['analytics'], $existing, $settings, 'analytics' );
 
         $general_sanitized = array(
             'ip_anonymization'        => self::normalize_bool( $general, 'ip_anonymization', $defaults['general']['ip_anonymization'] ),
@@ -120,12 +124,17 @@ class WP_Security_Pilot_Settings {
             ),
         );
 
+        $analytics_sanitized = array(
+            'enabled' => self::normalize_bool( $analytics, 'enabled', $defaults['analytics']['enabled'] ),
+        );
+
         return array(
             'general'       => $general_sanitized,
             'firewall'      => $firewall_sanitized,
             'scanner'       => $scanner_sanitized,
             'notifications' => $notifications_sanitized,
             'integrations'  => $integrations_sanitized,
+            'analytics'     => $analytics_sanitized,
             'updated_at'    => isset( $settings['updated_at'] ) ? sanitize_text_field( $settings['updated_at'] ) : '',
         );
     }

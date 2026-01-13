@@ -1,5 +1,6 @@
 import apiFetch from '@wordpress/api-fetch';
 import { useCallback, useEffect, useState } from '@wordpress/element';
+import { setAnalyticsEnabled } from '../utils/analytics';
 
 const defaultSettings = {
     general: {
@@ -34,6 +35,9 @@ const defaultSettings = {
             webhook_url: '',
         },
     },
+    analytics: {
+        enabled: true,
+    },
     updated_at: '',
 };
 
@@ -48,6 +52,7 @@ const Settings = () => {
     const [isKeyRemoving, setIsKeyRemoving] = useState(null);
     const [errorMessage, setErrorMessage] = useState('');
     const [keyErrorMessage, setKeyErrorMessage] = useState('');
+    const [analyticsExpanded, setAnalyticsExpanded] = useState(true);
 
     const fetchSettings = useCallback(async () => {
         setIsLoading(true);
@@ -70,6 +75,10 @@ const Settings = () => {
                     ...defaultSettings.integrations,
                     ...(rest?.integrations || {}),
                     slack: { ...defaultSettings.integrations.slack, ...(rest?.integrations?.slack || {}) },
+                },
+                analytics: {
+                    ...defaultSettings.analytics,
+                    ...(rest?.analytics || {}),
                 },
             };
             setSettings(merged);
@@ -135,6 +144,10 @@ const Settings = () => {
                     ...(rest?.integrations || {}),
                     slack: { ...defaultSettings.integrations.slack, ...(rest?.integrations?.slack || {}) },
                 },
+                analytics: {
+                    ...defaultSettings.analytics,
+                    ...(rest?.analytics || {}),
+                },
             };
             setSettings(merged);
             setApiKeys(Array.isArray(apiKeysFromApi) ? apiKeysFromApi : apiKeys);
@@ -148,7 +161,20 @@ const Settings = () => {
     const resetDefaults = () => {
         setGeneratedKey('');
         setSettings(defaultSettings);
+        if (typeof window !== 'undefined' && window.wpSecurityPilotSettings?.analytics) {
+            window.wpSecurityPilotSettings.analytics.enabled = defaultSettings.analytics.enabled;
+        }
+        setAnalyticsEnabled(defaultSettings.analytics.enabled);
         saveSettings(defaultSettings);
+    };
+
+    const handleAnalyticsToggle = (event) => {
+        const enabled = event.target.checked;
+        updateSection('analytics', 'enabled', enabled);
+        if (typeof window !== 'undefined' && window.wpSecurityPilotSettings?.analytics) {
+            window.wpSecurityPilotSettings.analytics.enabled = enabled;
+        }
+        setAnalyticsEnabled(enabled);
     };
 
     const generateApiKey = async () => {
@@ -235,6 +261,157 @@ const Settings = () => {
             </div>
             <div className="page-body two-column">
                 <section className="panel">
+                    <div className="analytics-notice">
+                        <div className="analytics-notice__header">
+                            <div className="analytics-notice__icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+                                    <path d="M12 16v-4"></path>
+                                    <path d="M12 8h.01"></path>
+                                </svg>
+                            </div>
+                            <div className="analytics-notice__content">
+                                <h4>Help Improve WP SEO Pilot</h4>
+                                <p>Share anonymous usage data to help us understand which features are most valuable and improve the plugin for everyone.</p>
+                            </div>
+                            <label className="toggle">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.analytics.enabled}
+                                    onChange={handleAnalyticsToggle}
+                                    disabled={isLoading || isSaving}
+                                    aria-label="Enable analytics"
+                                />
+                                <span className="toggle-track"></span>
+                            </label>
+                        </div>
+                        <button
+                            type="button"
+                            className="analytics-notice__expand"
+                            onClick={() => setAnalyticsExpanded((prev) => !prev)}
+                            aria-expanded={analyticsExpanded}
+                        >
+                            {analyticsExpanded ? 'Hide details' : 'Show details'}
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                        {analyticsExpanded && (
+                            <div className="analytics-notice__details">
+                                <div className="analytics-privacy-info">
+                                    <h5>What We Collect</h5>
+                                    <ul>
+                                        <li>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                            <span>Feature usage (e.g., "redirect created", "AI title generated")</span>
+                                        </li>
+                                        <li>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                            <span>Plugin version number</span>
+                                        </li>
+                                        <li>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                            <span>Pages visited within the plugin</span>
+                                        </li>
+                                        <li>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                            <span>Anonymized site identifier (hashed URL)</span>
+                                        </li>
+                                    </ul>
+                                    <h5>What We Never Collect</h5>
+                                    <ul className="analytics-privacy-info__never">
+                                        <li>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg>
+                                            <span>Personal information (names, emails, IP addresses)</span>
+                                        </li>
+                                        <li>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg>
+                                            <span>Your content (posts, pages, meta data)</span>
+                                        </li>
+                                        <li>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg>
+                                            <span>API keys or credentials</span>
+                                        </li>
+                                        <li>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg>
+                                            <span>Your site's URL or domain name</span>
+                                        </li>
+                                    </ul>
+                                    <h5>Privacy Measures</h5>
+                                    <div className="analytics-privacy-info__measures">
+                                        <div className="privacy-measure">
+                                            <span className="privacy-measure__icon">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                                </svg>
+                                            </span>
+                                            <div>
+                                                <strong>No Cookies</strong>
+                                                <span>We don't use any tracking cookies</span>
+                                            </div>
+                                        </div>
+                                        <div className="privacy-measure">
+                                            <span className="privacy-measure__icon">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                                </svg>
+                                            </span>
+                                            <div>
+                                                <strong>Admin Only</strong>
+                                                <span>Only tracks within plugin admin pages</span>
+                                            </div>
+                                        </div>
+                                        <div className="privacy-measure">
+                                            <span className="privacy-measure__icon">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <circle cx="12" cy="12" r="10"></circle>
+                                                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                                </svg>
+                                            </span>
+                                            <div>
+                                                <strong>Opt-out Anytime</strong>
+                                                <span>Disable tracking at any time</span>
+                                            </div>
+                                        </div>
+                                        <div className="privacy-measure">
+                                            <span className="privacy-measure__icon">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+                                                </svg>
+                                            </span>
+                                            <div>
+                                                <strong>Self-Hosted</strong>
+                                                <span>Analytics on our own Matomo instance</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p className="analytics-privacy-info__footer">This data helps us prioritize features, fix common issues, and understand how the plugin is used in real-world scenarios. Thank you for helping us improve!</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     <h3>General Settings</h3>
                     <div className="settings-row">
                         <div className="settings-label">

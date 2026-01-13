@@ -19,6 +19,8 @@ if ( ! defined( 'WPINC' ) ) {
 
 define( 'WP_SECURITY_PILOT_VERSION', '0.0.1' );
 define( 'WP_SECURITY_PILOT_SCHEMA_VERSION', '3.1.0' );
+define( 'WP_SECURITY_PILOT_MATOMO_URL', 'https://matomo.builditdesign.com/' );
+define( 'WP_SECURITY_PILOT_MATOMO_SITE_ID', '1' );
 
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-admin-loader.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/Core/class-firewall.php';
