@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: Saman Security
- * Plugin URI:  https://github.com/jhd3197/Saman-Security
+ * Plugin URI:  https://github.com/SamanLabs/Saman-Security
  * Description: A smart security plugin for WordPress.
  * Version: 0.0.1
  * Author:      Juan Denis
- * Author URI:  https://github.com/jhd3197
+ * Author URI:  https://github.com/SamanLabs
  * License: GPL-2.0+
  * License URI: http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain: saman-security
@@ -281,6 +281,52 @@ function saman_security_schedule_cleanup() {
     }
 }
 
+function saman_security_schedule_weekly_summary() {
+    $enabled = Saman_Security_Settings::get_setting( array( 'notifications', 'weekly_summary_enabled' ), true );
+
+    if ( ! $enabled ) {
+        wp_clear_scheduled_hook( 'ss_weekly_summary' );
+        return;
+    }
+
+    if ( wp_next_scheduled( 'ss_weekly_summary' ) ) {
+        return;
+    }
+
+    $day  = Saman_Security_Settings::get_setting( array( 'notifications', 'weekly_summary_day' ), 'monday' );
+    $time = Saman_Security_Settings::get_setting( array( 'notifications', 'weekly_summary_time' ), '09:00' );
+
+    $days_map = array(
+        'sunday'    => 0,
+        'monday'    => 1,
+        'tuesday'   => 2,
+        'wednesday' => 3,
+        'thursday'  => 4,
+        'friday'    => 5,
+        'saturday'  => 6,
+    );
+
+    $target_day = isset( $days_map[ $day ] ) ? $days_map[ $day ] : 1;
+    $time_parts = explode( ':', $time );
+    $hour       = isset( $time_parts[0] ) ? absint( $time_parts[0] ) : 9;
+    $minute     = isset( $time_parts[1] ) ? absint( $time_parts[1] ) : 0;
+
+    $current_day = (int) gmdate( 'w' );
+    $days_until  = ( $target_day - $current_day + 7 ) % 7;
+    if ( 0 === $days_until ) {
+        $days_until = 7;
+    }
+
+    $next_run = strtotime( gmdate( 'Y-m-d' ) . " +{$days_until} days" );
+    $next_run = strtotime( gmdate( 'Y-m-d', $next_run ) . " {$hour}:{$minute}:00" );
+
+    wp_schedule_event( $next_run, 'weekly', 'ss_weekly_summary' );
+}
+
+function saman_security_send_weekly_summary() {
+    Saman_Security_Notifications::send_weekly_summary();
+}
+
 function saman_security_cleanup_logs() {
     $days = (int) Saman_Security_Settings::get_setting( array( 'general', 'log_retention_days' ), 30 );
     if ( $days <= 0 ) {
@@ -341,6 +387,7 @@ function saman_security_uninstall() {
     // Clear new cron hooks
     wp_clear_scheduled_hook( 'ss_cleanup_logs' );
     wp_clear_scheduled_hook( 'ss_scan_scheduled' );
+    wp_clear_scheduled_hook( 'ss_weekly_summary' );
 
     // Also clear old hooks in case they still exist
     wp_clear_scheduled_hook( 'wpsp_cleanup_logs' );
@@ -384,7 +431,9 @@ function run_saman_security() {
 
     add_action( 'admin_init', 'saman_security_maybe_upgrade' );
     add_action( 'admin_init', 'saman_security_schedule_cleanup' );
+    add_action( 'admin_init', 'saman_security_schedule_weekly_summary' );
     add_action( 'ss_cleanup_logs', 'saman_security_cleanup_logs' );
+    add_action( 'ss_weekly_summary', 'saman_security_send_weekly_summary' );
 
     add_action(
         'wp_login_failed',
@@ -395,12 +444,25 @@ function run_saman_security() {
 
     add_action(
         'wp_login',
-        function( $user_login ) {
-            if ( current_user_can( 'manage_options' ) ) {
-                Saman_Security_Activity_Logger::log_event( 'allowed', 'Admin login', get_current_user_id() );
+        function( $user_login, $user ) {
+            // Send alert for any user login if enabled.
+            Saman_Security_Notifications::send_alert(
+                'user_login',
+                'User login detected.',
+                array(
+                    'user' => $user_login,
+                    'role' => implode( ', ', $user->roles ),
+                )
+            );
+
+            // Also send admin-specific alert if user is admin.
+            if ( user_can( $user, 'manage_options' ) ) {
+                Saman_Security_Activity_Logger::log_event( 'allowed', 'Admin login', $user->ID );
                 Saman_Security_Notifications::send_alert( 'admin_login', 'Admin login detected.', array( 'user' => $user_login ) );
             }
-        }
+        },
+        10,
+        2
     );
 
     add_action(

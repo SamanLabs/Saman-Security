@@ -29,8 +29,11 @@ class Saman_Security_Settings {
                     'on_malware_found'     => true,
                     'on_core_file_modified'=> true,
                     'on_admin_login'       => false,
+                    'on_user_login'        => false,
                 ),
                 'weekly_summary_enabled' => true,
+                'weekly_summary_day'     => 'monday',
+                'weekly_summary_time'    => '09:00',
             ),
             'integrations'  => array(
                 'slack' => array(
@@ -106,6 +109,17 @@ class Saman_Security_Settings {
         $recipient_email = isset( $notifications['recipient_email'] ) ? sanitize_email( $notifications['recipient_email'] ) : '';
         $alerts = isset( $notifications['alerts'] ) && is_array( $notifications['alerts'] ) ? $notifications['alerts'] : array();
 
+        $weekly_day = isset( $notifications['weekly_summary_day'] ) ? sanitize_key( $notifications['weekly_summary_day'] ) : $defaults['notifications']['weekly_summary_day'];
+        $valid_days = array( 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday' );
+        if ( ! in_array( $weekly_day, $valid_days, true ) ) {
+            $weekly_day = $defaults['notifications']['weekly_summary_day'];
+        }
+
+        $weekly_time = isset( $notifications['weekly_summary_time'] ) ? sanitize_text_field( $notifications['weekly_summary_time'] ) : $defaults['notifications']['weekly_summary_time'];
+        if ( ! preg_match( '/^\d{2}:\d{2}$/', $weekly_time ) ) {
+            $weekly_time = $defaults['notifications']['weekly_summary_time'];
+        }
+
         $notifications_sanitized = array(
             'recipient_email'        => $recipient_email,
             'alerts'                 => array(
@@ -113,8 +127,11 @@ class Saman_Security_Settings {
                 'on_malware_found'      => self::normalize_bool( $alerts, 'on_malware_found', $defaults['notifications']['alerts']['on_malware_found'] ),
                 'on_core_file_modified' => self::normalize_bool( $alerts, 'on_core_file_modified', $defaults['notifications']['alerts']['on_core_file_modified'] ),
                 'on_admin_login'        => self::normalize_bool( $alerts, 'on_admin_login', $defaults['notifications']['alerts']['on_admin_login'] ),
+                'on_user_login'         => self::normalize_bool( $alerts, 'on_user_login', $defaults['notifications']['alerts']['on_user_login'] ),
             ),
             'weekly_summary_enabled' => self::normalize_bool( $notifications, 'weekly_summary_enabled', $defaults['notifications']['weekly_summary_enabled'] ),
+            'weekly_summary_day'     => $weekly_day,
+            'weekly_summary_time'    => $weekly_time,
         );
 
         $slack = isset( $integrations['slack'] ) && is_array( $integrations['slack'] ) ? $integrations['slack'] : array();

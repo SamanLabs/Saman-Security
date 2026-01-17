@@ -27,8 +27,11 @@ const defaultSettings = {
             on_malware_found: true,
             on_core_file_modified: true,
             on_admin_login: false,
+            on_user_login: false,
         },
         weekly_summary_enabled: true,
+        weekly_summary_day: 'monday',
+        weekly_summary_time: '09:00',
     },
     integrations: {
         slack: {
@@ -676,6 +679,15 @@ const Settings = () => {
                                     />
                                     Admin login
                                 </label>
+                                <label className="checkbox">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.notifications.alerts.on_user_login}
+                                        onChange={(event) => updateAlert('on_user_login', event.target.checked)}
+                                        disabled={isLoading || isSaving}
+                                    />
+                                    Any user login
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -698,6 +710,37 @@ const Settings = () => {
                             </label>
                         </div>
                     </div>
+                    {settings.notifications.weekly_summary_enabled && (
+                        <div className="settings-row">
+                            <div className="settings-label">
+                                <label>Weekly Summary Schedule</label>
+                                <p className="settings-help">Choose when to receive the weekly digest.</p>
+                            </div>
+                            <div className="settings-control">
+                                <div className="inline-form">
+                                    <select
+                                        value={settings.notifications.weekly_summary_day}
+                                        onChange={(event) => updateSection('notifications', 'weekly_summary_day', event.target.value)}
+                                        disabled={isLoading || isSaving}
+                                    >
+                                        <option value="sunday">Sunday</option>
+                                        <option value="monday">Monday</option>
+                                        <option value="tuesday">Tuesday</option>
+                                        <option value="wednesday">Wednesday</option>
+                                        <option value="thursday">Thursday</option>
+                                        <option value="friday">Friday</option>
+                                        <option value="saturday">Saturday</option>
+                                    </select>
+                                    <input
+                                        type="time"
+                                        value={settings.notifications.weekly_summary_time}
+                                        onChange={(event) => updateSection('notifications', 'weekly_summary_time', event.target.value)}
+                                        disabled={isLoading || isSaving}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="form-footer">
                         <button

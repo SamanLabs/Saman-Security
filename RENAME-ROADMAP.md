@@ -48,12 +48,12 @@ This document outlines the complete plan to rename the plugin from **"WP Securit
 ```php
 // OLD
 Plugin Name: WP Security Pilot
-Plugin URI: https://github.com/jhd3197/WP-Security-Pilot
+Plugin URI: https://github.com/SamanLabs/Saman-Security
 Text Domain: wp-security-pilot
 
 // NEW
 Plugin Name: Saman Security
-Plugin URI: https://github.com/jhd3197/Saman-Security
+Plugin URI: https://github.com/SamanLabs/Saman-Security
 Text Domain: saman-security
 ```
 
@@ -236,7 +236,7 @@ Update REST API paths in all pages:
 - [ ] Rename plugin directory: `WP-Security-Pilot/` → `Saman-Security/` (or `saman-security/`)
 
 ### 7.2 GitHub Repository
-- [ ] Rename repository: `jhd3197/WP-Security-Pilot` → `jhd3197/Saman-Security`
+- [ ] Rename repository: `SamanLabs/Saman-Security` → `SamanLabs/Saman-Security`
 - [ ] Update all repository URL references in code
 
 ---

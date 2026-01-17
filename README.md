@@ -5,20 +5,20 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jhd3197/Saman-Security/releases">
-    <img src="https://img.shields.io/github/v/release/jhd3197/Saman-Security?style=flat-square&color=blue" alt="Latest Release">
+  <a href="https://github.com/SamanLabs/Saman-Security/releases">
+    <img src="https://img.shields.io/github/v/release/SamanLabs/Saman-Security?style=flat-square&color=blue" alt="Latest Release">
   </a>
-  <a href="https://github.com/jhd3197/Saman-Security/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/jhd3197/Saman-Security?style=flat-square&color=green" alt="License">
+  <a href="https://github.com/SamanLabs/Saman-Security/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/SamanLabs/Saman-Security?style=flat-square&color=green" alt="License">
   </a>
-  <a href="https://github.com/jhd3197/Saman-Security/stargazers">
-    <img src="https://img.shields.io/github/stars/jhd3197/Saman-Security?style=flat-square&color=yellow" alt="Stars">
+  <a href="https://github.com/SamanLabs/Saman-Security/stargazers">
+    <img src="https://img.shields.io/github/stars/SamanLabs/Saman-Security?style=flat-square&color=yellow" alt="Stars">
   </a>
-  <a href="https://github.com/jhd3197/Saman-Security/network/members">
-    <img src="https://img.shields.io/github/forks/jhd3197/Saman-Security?style=flat-square&color=orange" alt="Forks">
+  <a href="https://github.com/SamanLabs/Saman-Security/network/members">
+    <img src="https://img.shields.io/github/forks/SamanLabs/Saman-Security?style=flat-square&color=orange" alt="Forks">
   </a>
-  <a href="https://github.com/jhd3197/Saman-Security/issues">
-    <img src="https://img.shields.io/github/issues/jhd3197/Saman-Security?style=flat-square&color=red" alt="Issues">
+  <a href="https://github.com/SamanLabs/Saman-Security/issues">
+    <img src="https://img.shields.io/github/issues/SamanLabs/Saman-Security?style=flat-square&color=red" alt="Issues">
   </a>
 </p>
 
@@ -29,13 +29,13 @@
   <a href="https://php.net/">
     <img src="https://img.shields.io/badge/PHP-7.4%2B-777BB4?style=flat-square&logo=php" alt="PHP Version">
   </a>
-  <a href="https://github.com/jhd3197/Saman-Security/graphs/contributors">
-    <img src="https://img.shields.io/github/contributors/jhd3197/Saman-Security?style=flat-square&color=blueviolet" alt="Contributors">
+  <a href="https://github.com/SamanLabs/Saman-Security/graphs/contributors">
+    <img src="https://img.shields.io/github/contributors/SamanLabs/Saman-Security?style=flat-square&color=blueviolet" alt="Contributors">
   </a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/jhd3197/Saman-Security/discussions">
+  <a href="https://github.com/SamanLabs/Saman-Security/discussions">
     <img src="https://img.shields.io/badge/Discussions-Join%20Us-brightgreen?style=flat-square&logo=github" alt="Discussions">
   </a>
 </p>
@@ -202,15 +202,21 @@ npm run start
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/jhd3197/Saman-Security/issues)
+- **Issues**: [GitHub Issues](https://github.com/SamanLabs/Saman-Security/issues)
 - **Documentation**: [Full Documentation](docs/)
-- **Community**: [Discussions](https://github.com/jhd3197/Saman-Security/discussions)
+- **Community**: [Discussions](https://github.com/SamanLabs/Saman-Security/discussions)
 
 ---
 
 ## See Also
 
-- [Saman SEO](https://github.com/jhd3197/Saman-SEO) - A comprehensive, transparent SEO solution for WordPress.
+- [Saman SEO](https://github.com/SamanLabs/Saman-SEO) - A comprehensive, transparent SEO solution for WordPress.
+- [Saman AI](https://github.com/SamanLabs/Saman-AI) - An advanced AI-powered assistant for WordPress.
+- [Saman Backup](https://github.com/SamanLabs/Saman-Backup) - Reliable backup and restore solution for WordPress.
+- [Saman Field](https://github.com/SamanLabs/Saman-Field) - A flexible custom fields solution for WordPress.
+- [Saman Cache](https://github.com/SamanLabs/Saman-Cache) - A powerful caching solution for WordPress.
+- [Saman Forms](https://github.com/SamanLabs/Saman-Forms) - An intuitive form builder for WordPress.
+
 
 ---
 

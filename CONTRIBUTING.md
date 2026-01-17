@@ -8,11 +8,11 @@ There are many ways to contribute, from writing tutorials or blog posts, improvi
 
 ### Reporting Bugs
 
-If you find a bug, please open an issue on our [GitHub repository](https://github.com/jhd3197/Saman-Security/issues). Please include as much detail as possible, including steps to reproduce the bug.
+If you find a bug, please open an issue on our [GitHub repository](https://github.com/SamanLabs/Saman-Security/issues). Please include as much detail as possible, including steps to reproduce the bug.
 
 ### Suggesting Enhancements
 
-If you have an idea for a new feature or an enhancement to an existing feature, please open an issue on our [GitHub repository](https://github.com/jhd3197/Saman-Security/issues).
+If you have an idea for a new feature or an enhancement to an existing feature, please open an issue on our [GitHub repository](https://github.com/SamanLabs/Saman-Security/issues).
 
 ### Pull Requests
 
