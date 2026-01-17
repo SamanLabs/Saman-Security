@@ -1,14 +1,14 @@
 <?php
 /**
- * Plugin Name: WP Security Pilot
- * Plugin URI:  https://github.com/jhd3197/WP-Security-Pilot
+ * Plugin Name: Saman Security
+ * Plugin URI:  https://github.com/jhd3197/Saman-Security
  * Description: A smart security plugin for WordPress.
  * Version: 0.0.1
  * Author:      Juan Denis
  * Author URI:  https://github.com/jhd3197
  * License: GPL-2.0+
  * License URI: http://www.gnu.org/licenses/gpl-2.0.txt
- * Text Domain: wp-security-pilot
+ * Text Domain: saman-security
  * Domain Path: /languages
  */
 
@@ -17,10 +17,10 @@ if ( ! defined( 'WPINC' ) ) {
     die;
 }
 
-define( 'WP_SECURITY_PILOT_VERSION', '0.0.1' );
-define( 'WP_SECURITY_PILOT_SCHEMA_VERSION', '3.1.0' );
-define( 'WP_SECURITY_PILOT_MATOMO_URL', 'https://matomo.builditdesign.com/' );
-define( 'WP_SECURITY_PILOT_MATOMO_SITE_ID', '1' );
+define( 'SAMAN_SECURITY_VERSION', '0.0.1' );
+define( 'SAMAN_SECURITY_SCHEMA_VERSION', '3.1.0' );
+define( 'SAMAN_SECURITY_MATOMO_URL', 'https://matomo.builditdesign.com/' );
+define( 'SAMAN_SECURITY_MATOMO_SITE_ID', '1' );
 
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-admin-loader.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/Core/class-firewall.php';
@@ -34,9 +34,64 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/Core/class-notifications.ph
 require_once plugin_dir_path( __FILE__ ) . 'includes/Updater/class-github-updater.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/Updater/class-plugin-installer.php';
 
-function wp_security_pilot_install_schema() {
+/**
+ * Migrate options and settings from old plugin name to new.
+ * This ensures existing installs don't lose their configuration.
+ */
+function saman_security_migrate_from_old_plugin() {
+    // Migrate main settings
+    $old_settings = get_option( 'wp_security_pilot_settings' );
+    if ( $old_settings !== false && get_option( 'saman_security_settings' ) === false ) {
+        update_option( 'saman_security_settings', $old_settings );
+        delete_option( 'wp_security_pilot_settings' );
+    }
+
+    // Migrate hardening settings
+    $old_hardening = get_option( 'wp_security_pilot_hardening' );
+    if ( $old_hardening !== false && get_option( 'saman_security_hardening' ) === false ) {
+        update_option( 'saman_security_hardening', $old_hardening );
+        delete_option( 'wp_security_pilot_hardening' );
+    }
+
+    // Migrate schema version
+    $old_schema = get_option( 'wp_security_pilot_schema_version' );
+    if ( $old_schema !== false && get_option( 'saman_security_schema_version' ) === false ) {
+        update_option( 'saman_security_schema_version', $old_schema );
+        delete_option( 'wp_security_pilot_schema_version' );
+    }
+
+    // Migrate blocked countries
+    $old_countries = get_option( 'wpsp_blocked_countries' );
+    if ( $old_countries !== false && get_option( 'ss_blocked_countries' ) === false ) {
+        update_option( 'ss_blocked_countries', $old_countries );
+        delete_option( 'wpsp_blocked_countries' );
+    }
+
+    // Migrate scan schedule
+    $old_schedule = get_option( 'wpsp_scan_schedule' );
+    if ( $old_schedule !== false && get_option( 'ss_scan_schedule' ) === false ) {
+        update_option( 'ss_scan_schedule', $old_schedule );
+        delete_option( 'wpsp_scan_schedule' );
+    }
+
+    // Migrate beta plugins option
+    $old_beta = get_option( 'wpsp_beta_plugins' );
+    if ( $old_beta !== false && get_option( 'ss_beta_plugins' ) === false ) {
+        update_option( 'ss_beta_plugins', $old_beta );
+        delete_option( 'wpsp_beta_plugins' );
+    }
+
+    // Clear old cron hooks and let new ones be scheduled
+    wp_clear_scheduled_hook( 'wpsp_cleanup_logs' );
+    wp_clear_scheduled_hook( 'wpsp_scan_scheduled' );
+    wp_clear_scheduled_hook( 'wpsp_scan_chunk' );
+}
+
+function saman_security_install_schema() {
     global $wpdb;
 
+    // Note: Database tables keep wpsp_ prefix for backward compatibility
+    // This avoids requiring data migration for existing installs
     $table_name = $wpdb->prefix . 'wpsp_blocked_ips';
     $activity_table = $wpdb->prefix . 'wpsp_activity_log';
     $ip_list_table = $wpdb->prefix . 'wpsp_ip_list';
@@ -152,13 +207,13 @@ function wp_security_pilot_install_schema() {
     dbDelta( $scan_ignore_sql );
     dbDelta( $scan_files_sql );
 
-    wp_security_pilot_migrate_blocked_ips( $table_name, $ip_list_table );
-    wp_security_pilot_seed_firewall_rules( $rules_table );
+    saman_security_migrate_blocked_ips( $table_name, $ip_list_table );
+    saman_security_seed_firewall_rules( $rules_table );
 
-    update_option( 'wp_security_pilot_schema_version', WP_SECURITY_PILOT_SCHEMA_VERSION );
+    update_option( 'saman_security_schema_version', SAMAN_SECURITY_SCHEMA_VERSION );
 }
 
-function wp_security_pilot_migrate_blocked_ips( $legacy_table, $ip_list_table ) {
+function saman_security_migrate_blocked_ips( $legacy_table, $ip_list_table ) {
     global $wpdb;
 
     $legacy_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $legacy_table ) );
@@ -174,7 +229,7 @@ function wp_security_pilot_migrate_blocked_ips( $legacy_table, $ip_list_table ) 
     );
 }
 
-function wp_security_pilot_seed_firewall_rules( $rules_table ) {
+function saman_security_seed_firewall_rules( $rules_table ) {
     global $wpdb;
 
     $rules_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $rules_table ) );
@@ -187,7 +242,7 @@ function wp_security_pilot_seed_firewall_rules( $rules_table ) {
         return;
     }
 
-    $defaults = WP_Security_Pilot_Firewall::get_default_rules();
+    $defaults = Saman_Security_Firewall::get_default_rules();
     foreach ( $defaults as $rule ) {
         $wpdb->insert(
             $rules_table,
@@ -204,28 +259,30 @@ function wp_security_pilot_seed_firewall_rules( $rules_table ) {
     }
 }
 
-function wp_security_pilot_activate() {
-    wp_security_pilot_install_schema();
-    wp_security_pilot_schedule_cleanup();
+function saman_security_activate() {
+    saman_security_migrate_from_old_plugin();
+    saman_security_install_schema();
+    saman_security_schedule_cleanup();
 }
 
-register_activation_hook( __FILE__, 'wp_security_pilot_activate' );
+register_activation_hook( __FILE__, 'saman_security_activate' );
 
-function wp_security_pilot_maybe_upgrade() {
-    $current_version = get_option( 'wp_security_pilot_schema_version', '0' );
-    if ( version_compare( $current_version, WP_SECURITY_PILOT_SCHEMA_VERSION, '<' ) ) {
-        wp_security_pilot_install_schema();
+function saman_security_maybe_upgrade() {
+    $current_version = get_option( 'saman_security_schema_version', '0' );
+    if ( version_compare( $current_version, SAMAN_SECURITY_SCHEMA_VERSION, '<' ) ) {
+        saman_security_migrate_from_old_plugin();
+        saman_security_install_schema();
     }
 }
 
-function wp_security_pilot_schedule_cleanup() {
-    if ( ! wp_next_scheduled( 'wpsp_cleanup_logs' ) ) {
-        wp_schedule_event( time() + DAY_IN_SECONDS, 'daily', 'wpsp_cleanup_logs' );
+function saman_security_schedule_cleanup() {
+    if ( ! wp_next_scheduled( 'ss_cleanup_logs' ) ) {
+        wp_schedule_event( time() + DAY_IN_SECONDS, 'daily', 'ss_cleanup_logs' );
     }
 }
 
-function wp_security_pilot_cleanup_logs() {
-    $days = (int) WP_Security_Pilot_Settings::get_setting( array( 'general', 'log_retention_days' ), 30 );
+function saman_security_cleanup_logs() {
+    $days = (int) Saman_Security_Settings::get_setting( array( 'general', 'log_retention_days' ), 30 );
     if ( $days <= 0 ) {
         return;
     }
@@ -255,8 +312,8 @@ function wp_security_pilot_cleanup_logs() {
     );
 }
 
-function wp_security_pilot_uninstall() {
-    $settings = get_option( WP_Security_Pilot_Settings::OPTION_KEY, array() );
+function saman_security_uninstall() {
+    $settings = get_option( Saman_Security_Settings::OPTION_KEY, array() );
     $settings = is_array( $settings ) ? $settings : array();
     $delete_data = isset( $settings['general']['delete_data_on_uninstall'] ) ? (bool) $settings['general']['delete_data_on_uninstall'] : false;
 
@@ -281,43 +338,58 @@ function wp_security_pilot_uninstall() {
         $wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}{$table}" );
     }
 
+    // Clear new cron hooks
+    wp_clear_scheduled_hook( 'ss_cleanup_logs' );
+    wp_clear_scheduled_hook( 'ss_scan_scheduled' );
+
+    // Also clear old hooks in case they still exist
     wp_clear_scheduled_hook( 'wpsp_cleanup_logs' );
     wp_clear_scheduled_hook( 'wpsp_scan_scheduled' );
 
-    delete_option( WP_Security_Pilot_Settings::OPTION_KEY );
+    // Delete new options
+    delete_option( Saman_Security_Settings::OPTION_KEY );
+    delete_option( 'saman_security_hardening' );
+    delete_option( 'ss_blocked_countries' );
+    delete_option( 'ss_scan_schedule' );
+    delete_option( 'saman_security_schema_version' );
+    delete_option( 'ss_beta_plugins' );
+
+    // Also delete old options in case they still exist
+    delete_option( 'wp_security_pilot_settings' );
     delete_option( 'wp_security_pilot_hardening' );
     delete_option( 'wpsp_blocked_countries' );
     delete_option( 'wpsp_scan_schedule' );
     delete_option( 'wp_security_pilot_schema_version' );
+    delete_option( 'wpsp_beta_plugins' );
 }
 
-register_uninstall_hook( __FILE__, 'wp_security_pilot_uninstall' );
+register_uninstall_hook( __FILE__, 'saman_security_uninstall' );
 
-function run_wp_security_pilot() {
-    $plugin = new WP_Security_Pilot_Admin_Loader();
+function run_saman_security() {
+    $plugin = new Saman_Security_Admin_Loader();
     $plugin->run();
 
     // Initialize GitHub updater
-    $updater = WP_Security_Pilot_GitHub_Updater::get_instance();
+    $updater = Saman_Security_GitHub_Updater::get_instance();
 
-    $firewall = new WP_Security_Pilot_Firewall();
+    $firewall = new Saman_Security_Firewall();
     add_action( 'init', array( $firewall, 'run' ) );
 
-    $hardening = new WP_Security_Pilot_Hardening();
+    $hardening = new Saman_Security_Hardening();
     $hardening->register_hooks();
 
-    $scanner = new WP_Security_Pilot_Scanner();
-    add_action( 'wpsp_scan_chunk', array( $scanner, 'run_scan_chunk' ) );
-    add_action( 'wpsp_scan_scheduled', array( $scanner, 'run_scheduled_scan' ) );
+    $scanner = new Saman_Security_Scanner();
+    add_action( 'ss_scan_chunk', array( $scanner, 'run_scan_chunk' ) );
+    add_action( 'ss_scan_scheduled', array( $scanner, 'run_scheduled_scan' ) );
 
-    add_action( 'admin_init', 'wp_security_pilot_maybe_upgrade' );
-    add_action( 'admin_init', 'wp_security_pilot_schedule_cleanup' );
-    add_action( 'wpsp_cleanup_logs', 'wp_security_pilot_cleanup_logs' );
+    add_action( 'admin_init', 'saman_security_maybe_upgrade' );
+    add_action( 'admin_init', 'saman_security_schedule_cleanup' );
+    add_action( 'ss_cleanup_logs', 'saman_security_cleanup_logs' );
 
     add_action(
         'wp_login_failed',
         function( $username ) {
-            WP_Security_Pilot_Activity_Logger::log_event( 'blocked', 'Brute force attempt', 0, '', $username );
+            Saman_Security_Activity_Logger::log_event( 'blocked', 'Brute force attempt', 0, '', $username );
         }
     );
 
@@ -325,8 +397,8 @@ function run_wp_security_pilot() {
         'wp_login',
         function( $user_login ) {
             if ( current_user_can( 'manage_options' ) ) {
-                WP_Security_Pilot_Activity_Logger::log_event( 'allowed', 'Admin login', get_current_user_id() );
-                WP_Security_Pilot_Notifications::send_alert( 'admin_login', 'Admin login detected.', array( 'user' => $user_login ) );
+                Saman_Security_Activity_Logger::log_event( 'allowed', 'Admin login', get_current_user_id() );
+                Saman_Security_Notifications::send_alert( 'admin_login', 'Admin login detected.', array( 'user' => $user_login ) );
             }
         }
     );
@@ -336,9 +408,9 @@ function run_wp_security_pilot() {
         function( $user_id ) {
             $user = get_userdata( $user_id );
             if ( $user && in_array( 'administrator', (array) $user->roles, true ) ) {
-                WP_Security_Pilot_Activity_Logger::log_event( 'alert', 'New admin user created', $user_id );
+                Saman_Security_Activity_Logger::log_event( 'alert', 'New admin user created', $user_id );
             }
         }
     );
 }
-run_wp_security_pilot();
+run_saman_security();

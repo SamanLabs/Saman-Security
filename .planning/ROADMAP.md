@@ -1,7 +1,7 @@
-# WP Security Pilot Plugin Roadmap
+# Saman Security Plugin Roadmap
 
 ## Overview
-This roadmap outlines the planned features and development phases for the WP Security Pilot plugin, designed to enhance WordPress security with advanced monitoring, reporting, and AI-powered threat detection capabilities.
+This roadmap outlines the planned features and development phases for the Saman Security plugin, designed to enhance WordPress security with advanced monitoring, reporting, and AI-powered threat detection capabilities.
 
 ## Phase 1: Foundation & Core Security Features
 ### Timeline: Months 1-2
@@ -69,8 +69,8 @@ This roadmap outlines the planned features and development phases for the WP Sec
 ## Phase 3: AI Integration & Smart Detection
 ### Timeline: Months 5-6
 
-#### WP AI Pilot Plugin Integration
-- Seamless connection with WP AI Pilot plugin
+#### Saman AI Plugin Integration
+- Seamless connection with Saman AI plugin
 - Shared threat intelligence database
 - Cross-plugin security event correlation
 - Unified dashboard for both plugins
@@ -157,7 +157,7 @@ This roadmap outlines the planned features and development phases for the WP Sec
 - REST API endpoints for remote settings management
 - Settings import/export for migration and backup purposes
 
-### WP AI Pilot Plugin Integration Architecture
+### Saman AI Plugin Integration Architecture
 - Standardized API contracts for inter-plugin communication
 - Event-driven architecture for real-time data sharing
 - Plugin dependency management and version compatibility

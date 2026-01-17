@@ -1,20 +1,20 @@
 /* Generated from src/less/main.less. */
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
-.wp-security-pilot-admin button,
-.wp-security-pilot-admin input {
+.saman-security-admin button,
+.saman-security-admin input {
   font-family: inherit;
 }
-body[class*="wp-security-pilot"] #wpcontent {
+body[class*="saman-security"] #wpcontent {
   padding-left: 0;
   min-height: 0;
 }
-body[class*="wp-security-pilot"] #wpwrap {
+body[class*="saman-security"] #wpwrap {
   background: #f5f7fb;
 }
-body[class*="wp-security-pilot"] #wpbody-content {
+body[class*="saman-security"] #wpbody-content {
   padding-bottom: 0;
 }
-.wp-security-pilot-admin {
+.saman-security-admin {
   --color-primary: #2271b1;
   --color-primary-strong: #195d90;
   --color-surface: #ffffff;
@@ -33,21 +33,21 @@ body[class*="wp-security-pilot"] #wpbody-content {
   box-sizing: border-box;
   background: radial-gradient(circle at top left, rgba(34, 113, 177, 0.08), transparent 45%), radial-gradient(circle at top right, rgba(46, 125, 50, 0.06), transparent 40%), #f5f7fb;
 }
-body.admin-bar .wp-security-pilot-admin {
+body.admin-bar .saman-security-admin {
   min-height: calc(100vh - 32px);
 }
 @media (max-width: 782px) {
-  body.admin-bar .wp-security-pilot-admin {
+  body.admin-bar .saman-security-admin {
     min-height: calc(100vh - 46px);
   }
 }
-.wp-security-pilot-shell {
+.saman-security-shell {
   max-width: 1400px;
   margin: 0 auto;
 }
-.wp-security-pilot-admin *,
-.wp-security-pilot-admin *::before,
-.wp-security-pilot-admin *::after {
+.saman-security-admin *,
+.saman-security-admin *::before,
+.saman-security-admin *::after {
   box-sizing: border-box;
 }
 .muted {

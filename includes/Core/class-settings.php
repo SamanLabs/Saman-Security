@@ -1,7 +1,7 @@
 <?php
 
-class WP_Security_Pilot_Settings {
-    const OPTION_KEY = 'wp_security_pilot_settings';
+class Saman_Security_Settings {
+    const OPTION_KEY = 'saman_security_settings';
 
     public static function get_defaults() {
         return array(
@@ -180,7 +180,7 @@ class WP_Security_Pilot_Settings {
             $label = 'API Key';
         }
 
-        $prefix = 'wpsp_live_' . substr( wp_generate_password( 6, false, false ), 0, 6 );
+        $prefix = 'ss_live_' . substr( wp_generate_password( 6, false, false ), 0, 6 );
         $secret = wp_generate_password( 32, false, false );
         $full_key = $prefix . '_' . $secret;
         $hash = hash_hmac( 'sha256', $full_key, wp_salt( 'auth' ) );

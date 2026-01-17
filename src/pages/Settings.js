@@ -58,7 +58,7 @@ const Settings = () => {
         setIsLoading(true);
         setErrorMessage('');
         try {
-            const data = await apiFetch({ path: '/wp-security-pilot/v1/settings' });
+            const data = await apiFetch({ path: '/saman-security/v1/settings' });
             const { api_keys: apiKeysFromApi, ...rest } = data || {};
             const merged = {
                 ...defaultSettings,
@@ -123,7 +123,7 @@ const Settings = () => {
         try {
             const payload = overrideSettings || settings;
             const data = await apiFetch({
-                path: '/wp-security-pilot/v1/settings',
+                path: '/saman-security/v1/settings',
                 method: 'POST',
                 data: payload,
             });
@@ -161,8 +161,8 @@ const Settings = () => {
     const resetDefaults = () => {
         setGeneratedKey('');
         setSettings(defaultSettings);
-        if (typeof window !== 'undefined' && window.wpSecurityPilotSettings?.analytics) {
-            window.wpSecurityPilotSettings.analytics.enabled = defaultSettings.analytics.enabled;
+        if (typeof window !== 'undefined' && window.samanSecuritySettings?.analytics) {
+            window.samanSecuritySettings.analytics.enabled = defaultSettings.analytics.enabled;
         }
         setAnalyticsEnabled(defaultSettings.analytics.enabled);
         saveSettings(defaultSettings);
@@ -171,8 +171,8 @@ const Settings = () => {
     const handleAnalyticsToggle = (event) => {
         const enabled = event.target.checked;
         updateSection('analytics', 'enabled', enabled);
-        if (typeof window !== 'undefined' && window.wpSecurityPilotSettings?.analytics) {
-            window.wpSecurityPilotSettings.analytics.enabled = enabled;
+        if (typeof window !== 'undefined' && window.samanSecuritySettings?.analytics) {
+            window.samanSecuritySettings.analytics.enabled = enabled;
         }
         setAnalyticsEnabled(enabled);
     };
@@ -182,7 +182,7 @@ const Settings = () => {
         setKeyErrorMessage('');
         try {
             const data = await apiFetch({
-                path: '/wp-security-pilot/v1/settings/api-keys',
+                path: '/saman-security/v1/settings/api-keys',
                 method: 'POST',
                 data: {
                     label: newKeyLabel,
@@ -207,7 +207,7 @@ const Settings = () => {
         setKeyErrorMessage('');
         try {
             const data = await apiFetch({
-                path: `/wp-security-pilot/v1/settings/api-keys/${prefix}`,
+                path: `/saman-security/v1/settings/api-keys/${prefix}`,
                 method: 'DELETE',
             });
             setApiKeys(Array.isArray(data) ? data : []);
@@ -271,7 +271,7 @@ const Settings = () => {
                                 </svg>
                             </div>
                             <div className="analytics-notice__content">
-                                <h4>Help Improve WP SEO Pilot</h4>
+                                <h4>Help Improve Saman Security</h4>
                                 <p>Share anonymous usage data to help us understand which features are most valuable and improve the plugin for everyone.</p>
                             </div>
                             <label className="toggle">

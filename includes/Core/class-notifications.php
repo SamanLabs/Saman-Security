@@ -1,8 +1,8 @@
 <?php
 
-class WP_Security_Pilot_Notifications {
+class Saman_Security_Notifications {
     public static function send_alert( $type, $message, $context = array() ) {
-        $settings = WP_Security_Pilot_Settings::get_settings();
+        $settings = Saman_Security_Settings::get_settings();
         $alerts = isset( $settings['notifications']['alerts'] ) ? $settings['notifications']['alerts'] : array();
 
         $mapping = array(
@@ -24,12 +24,12 @@ class WP_Security_Pilot_Notifications {
             $recipient = get_option( 'admin_email' );
         }
 
-        $subject = sprintf( '[WP Security Pilot] %s', ucwords( str_replace( '_', ' ', $type ) ) );
+        $subject = sprintf( '[Saman Security] %s', ucwords( str_replace( '_', ' ', $type ) ) );
         $body = $message;
 
         if ( ! empty( $context ) ) {
             if ( isset( $context['ip'] ) ) {
-                $context['ip'] = WP_Security_Pilot_Settings::anonymize_ip( $context['ip'] );
+                $context['ip'] = Saman_Security_Settings::anonymize_ip( $context['ip'] );
             }
             $body .= "\n\n" . wp_json_encode( $context, JSON_PRETTY_PRINT );
         }

@@ -1,4 +1,4 @@
-const MATOMO_SCRIPT_ID = 'wp-security-pilot-matomo';
+const MATOMO_SCRIPT_ID = 'saman-security-matomo';
 
 const normalizeBaseUrl = (url = '') => {
     if (!url) {
@@ -13,7 +13,7 @@ const getAnalyticsConfig = (override = {}) => {
         return override;
     }
 
-    const base = window.wpSecurityPilotSettings?.analytics || {};
+    const base = window.samanSecuritySettings?.analytics || {};
     return { ...base, ...override };
 };
 
@@ -27,11 +27,11 @@ export const initMatomo = (override = {}) => {
         return;
     }
 
-    if (window._wpspMatomoInitialized) {
+    if (window._ssMatomoInitialized) {
         return;
     }
 
-    window._wpspMatomoInitialized = true;
+    window._ssMatomoInitialized = true;
 
     const baseUrl = normalizeBaseUrl(config.matomoUrl);
     const queue = window._paq || [];
@@ -64,7 +64,7 @@ export const setAnalyticsEnabled = (enabled, override = {}) => {
         return;
     }
 
-    window._wpspMatomoDisabled = !enabled;
+    window._ssMatomoDisabled = !enabled;
 
     if (!enabled) {
         return;
@@ -74,7 +74,7 @@ export const setAnalyticsEnabled = (enabled, override = {}) => {
 };
 
 export const trackPageView = (path, title) => {
-    if (typeof window === 'undefined' || window._wpspMatomoDisabled) {
+    if (typeof window === 'undefined' || window._ssMatomoDisabled) {
         return;
     }
 

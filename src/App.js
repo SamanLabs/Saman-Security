@@ -10,13 +10,13 @@ import More from './pages/More';
 import { setAnalyticsEnabled, trackPageView } from './utils/analytics';
 
 const viewToPage = {
-    dashboard: 'wp-security-pilot-dashboard',
-    firewall: 'wp-security-pilot-firewall',
-    scanner: 'wp-security-pilot-scanner',
-    hardening: 'wp-security-pilot-hardening',
-    activity: 'wp-security-pilot-activity',
-    settings: 'wp-security-pilot-settings',
-    more: 'wp-security-pilot-more',
+    dashboard: 'saman-security-dashboard',
+    firewall: 'saman-security-firewall',
+    scanner: 'saman-security-scanner',
+    hardening: 'saman-security-hardening',
+    activity: 'saman-security-activity',
+    settings: 'saman-security-settings',
+    more: 'saman-security-more',
 };
 
 const pageToView = Object.entries(viewToPage).reduce((acc, [view, page]) => {
@@ -41,12 +41,12 @@ const App = ({ initialView = 'dashboard' }) => {
             return;
         }
 
-        const menu = document.getElementById('toplevel_page_wp-security-pilot');
+        const menu = document.getElementById('toplevel_page_saman-security');
         if (!menu) {
             return;
         }
 
-        const submenuLinks = menu.querySelectorAll('.wp-submenu a[href*="page=wp-security-pilot"]');
+        const submenuLinks = menu.querySelectorAll('.wp-submenu a[href*="page=saman-security"]');
         submenuLinks.forEach((link) => {
             link.removeAttribute('aria-current');
             const listItem = link.closest('li');
@@ -110,7 +110,7 @@ const App = ({ initialView = 'dashboard' }) => {
             return;
         }
 
-        const analyticsConfig = window.wpSecurityPilotSettings?.analytics;
+        const analyticsConfig = window.samanSecuritySettings?.analytics;
         setAnalyticsEnabled(Boolean(analyticsConfig?.enabled), analyticsConfig || {});
     }, []);
 
@@ -120,7 +120,7 @@ const App = ({ initialView = 'dashboard' }) => {
         }
 
         const label = viewLabels[currentView] || 'Dashboard';
-        trackPageView(`/wp-security-pilot/${currentView}`, `WP Security Pilot - ${label}`);
+        trackPageView(`/saman-security/${currentView}`, `Saman Security - ${label}`);
     }, [currentView]);
 
     useEffect(() => {
@@ -130,13 +130,13 @@ const App = ({ initialView = 'dashboard' }) => {
                 return;
             }
 
-            const menu = document.getElementById('toplevel_page_wp-security-pilot');
+            const menu = document.getElementById('toplevel_page_saman-security');
             if (!menu || !menu.contains(link)) {
                 return;
             }
 
             const href = link.getAttribute('href');
-            if (!href || !href.includes('page=wp-security-pilot')) {
+            if (!href || !href.includes('page=saman-security')) {
                 return;
             }
 
@@ -174,8 +174,8 @@ const App = ({ initialView = 'dashboard' }) => {
     };
 
     return (
-        <div className="wp-security-pilot-admin">
-            <div className="wp-security-pilot-shell">
+        <div className="saman-security-admin">
+            <div className="saman-security-shell">
                 <Header currentView={currentView} onNavigate={handleNavigate} />
                 <div className="content-area">
                     {renderView()}
