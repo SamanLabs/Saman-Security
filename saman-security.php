@@ -3,7 +3,7 @@
  * Plugin Name: Saman Security
  * Plugin URI:  https://github.com/SamanLabs/Saman-Security
  * Description: A smart security plugin for WordPress.
- * Version: 0.0.1
+ * Version: 0.0.2
  * Author:      Juan Denis
  * Author URI:  https://github.com/SamanLabs
  * License: GPL-2.0+
@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) {
     die;
 }
 
-define( 'SAMAN_SECURITY_VERSION', '0.0.1' );
+define( 'SAMAN_SECURITY_VERSION', '0.0.2' );
 define( 'SAMAN_SECURITY_SCHEMA_VERSION', '3.1.0' );
 define( 'SAMAN_SECURITY_MATOMO_URL', 'https://matomo.builditdesign.com/' );
 define( 'SAMAN_SECURITY_MATOMO_SITE_ID', '1' );
